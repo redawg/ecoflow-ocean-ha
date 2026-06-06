@@ -1,0 +1,36 @@
+title: EcoFlow Power Ocean
+views:
+  - title: Energy
+    path: ecoflow-ocean
+    icon: mdi:solar-power
+    cards:
+      - type: markdown
+        content: |
+          ## Power Ocean live view
+          Replace `YOUR_SN` below with your inverter serial number (or rename entities after setup).
+
+      - type: entities
+        title: Battery
+        entities:
+          - entity: sensor.YOUR_SN_battery_soc
+          - entity: sensor.YOUR_SN_battery_power
+
+      - type: entities
+        title: Power flows
+        entities:
+          - entity: sensor.YOUR_SN_solar_power
+          - entity: sensor.YOUR_SN_grid_power
+          - entity: sensor.YOUR_SN_home_power
+
+      - type: entities
+        title: Status
+        entities:
+          - entity: sensor.YOUR_SN_status
+
+      # Optional: install power-flow-card-plus from HACS, then uncomment:
+      # - type: custom:power-flow-card-plus
+      #   entities:
+      #     battery: sensor.YOUR_SN_battery_power
+      #     grid: sensor.YOUR_SN_grid_power
+      #     solar: sensor.YOUR_SN_solar_power
+      #     home: sensor.YOUR_SN_home_power
