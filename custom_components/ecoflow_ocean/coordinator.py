@@ -10,7 +10,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 from .pyecoflowocean import ApiNotMappedError, EcoflowOcean, EcoflowOceanState
 
-from .const import CONF_SERIAL_NUMBER, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import CONF_PRODUCT_TYPE, CONF_SERIAL_NUMBER, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ class EcoflowOceanCoordinator(DataUpdateCoordinator[EcoflowOceanState]):
         """Initialize."""
         self.api = api
         self.serial_number = entry.data[CONF_SERIAL_NUMBER]
+        self.product_type = entry.data.get(CONF_PRODUCT_TYPE, "83")
         super().__init__(
             hass,
             _LOGGER,
@@ -40,7 +41,10 @@ class EcoflowOceanCoordinator(DataUpdateCoordinator[EcoflowOceanState]):
     async def _async_update_data(self) -> EcoflowOceanState:
         """Refresh Power Ocean telemetry."""
         try:
-            return await self.api.get_system_state(self.serial_number)
+            return await self.api.get_system_state(
+                self.serial_number,
+                product_type=self.product_type,
+            )
         except ApiNotMappedError as err:
             raise UpdateFailed(str(err)) from err
         except Exception as err:

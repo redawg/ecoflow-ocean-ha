@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any
 
 
-@dataclass(slots=True)
+@dataclass
 class EcoflowDevice:
     """A Power Ocean inverter or related device from account discovery."""
 
@@ -17,7 +17,7 @@ class EcoflowDevice:
     raw: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class EcoflowOceanState:
     """Parsed live system state for one Power Ocean installation."""
 
@@ -28,6 +28,12 @@ class EcoflowOceanState:
     grid_power_w: float | None = None
     home_power_w: float | None = None
     status: str | None = None
+    work_mode: str | None = None
+    backup_soc_limit: float | None = None
+    discharge_soc_limit: float | None = None
+    feed_power_limit_w: float | None = None
+    feed_ratio_percent: float | None = None
+    online: bool | None = None
     phase_a_voltage_v: float | None = None
     phase_a_current_a: float | None = None
     phase_a_power_w: float | None = None
@@ -50,6 +56,12 @@ class EcoflowOceanState:
             "grid_power_w",
             "home_power_w",
             "status",
+            "work_mode",
+            "backup_soc_limit",
+            "discharge_soc_limit",
+            "feed_power_limit_w",
+            "feed_ratio_percent",
+            "online",
             "phase_a_voltage_v",
             "phase_a_current_a",
             "phase_a_power_w",

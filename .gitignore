@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+# Copy to .env and fill in (never commit .env)
 .env
 *.har
 captures/

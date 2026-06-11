@@ -3,26 +3,18 @@
     "step": {
       "user": {
         "title": "Connect to EcoFlow",
-        "description": "Enter the same email and password you use in the EcoFlow mobile app (US cloud).",
+        "description": "Use the same EcoFlow app account. Enter your Power Ocean inverter serial number from the app device settings.",
         "data": {
+          "serial_number": "Inverter serial number",
           "username": "Email",
-          "password": "Password"
-        }
-      },
-      "device": {
-        "title": "Select Power Ocean",
-        "description": "Choose the Power Ocean inverter to import into Home Assistant.",
-        "data": {
-          "serial_number": "Inverter serial number"
+          "password": "Password",
+          "product_type": "Power Ocean model"
         }
       }
     },
     "error": {
-      "cannot_connect": "Could not connect to the EcoFlow cloud API.",
-      "invalid_auth": "Invalid email or password.",
-      "api_not_mapped": "The EcoFlow app API is not mapped yet. Capture app traffic and update pyecoflowocean first.",
-      "no_devices": "No Power Ocean devices were found on this account.",
-      "device_not_found": "The selected device could not be found."
+      "cannot_connect": "Could not connect to the EcoFlow cloud API or verify this inverter.",
+      "invalid_auth": "Invalid email or password."
     },
     "abort": {
       "already_configured": "This Power Ocean system is already configured."

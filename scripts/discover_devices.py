@@ -7,8 +7,10 @@ Usage:
 Environment variables:
   ECOFLOW_EMAIL
   ECOFLOW_PASSWORD
-  ECOFLOW_REGION       (optional, default: us)
-  ECOFLOW_DUMP_JSON=1  (optional, print raw payloads)
+  ECOFLOW_SERIAL          (optional — lists account devices if omitted)
+  ECOFLOW_PRODUCT_TYPE    (optional, default: 83; use 88 for OCEAN Pro)
+  ECOFLOW_REGION          (optional, default: us)
+  ECOFLOW_DUMP_JSON=1     (optional, print raw payloads)
 """
 
 from __future__ import annotations
@@ -22,65 +24,73 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "custom_components" / "ecoflow_ocean"))
 
-from pyecoflowocean import ApiNotMappedError, EcoflowOcean
-from pyecoflowocean.client import filter_power_ocean_devices
+from pyecoflowocean import EcoflowOcean
+from pyecoflowocean.const import PRODUCT_TYPE_NAMES, PRODUCT_TYPE_POWER_OCEAN
 
 
 async def main() -> int:
     email = os.environ.get("ECOFLOW_EMAIL")
     password = os.environ.get("ECOFLOW_PASSWORD")
+    serial = os.environ.get("ECOFLOW_SERIAL")
+    product_type = os.environ.get("ECOFLOW_PRODUCT_TYPE", PRODUCT_TYPE_POWER_OCEAN)
     region = os.environ.get("ECOFLOW_REGION", "us")
     dump_json = os.environ.get("ECOFLOW_DUMP_JSON")
 
     if not email or not password:
         print(
-            "Set ECOFLOW_EMAIL and ECOFLOW_PASSWORD environment variables.",
+            "Set ECOFLOW_EMAIL and ECOFLOW_PASSWORD.",
             file=sys.stderr,
         )
         return 1
 
-    api = EcoflowOcean(email, password, region=region)
+    api = EcoflowOcean(
+        email,
+        password,
+        region=region,
+        serial_number=serial,
+        product_type=product_type,
+    )
     try:
         await api.login()
-        print(f"Logged in to EcoFlow ({region})\n")
+        print(f"Logged in to EcoFlow ({region})")
 
         devices = await api.get_devices()
-        devices = filter_power_ocean_devices(devices)
+        if devices:
+            print("\nAccount devices (Ocean / inverter candidates):")
+            for device in devices:
+                label = PRODUCT_TYPE_NAMES.get(device.product_type, device.product_type)
+                print(f"  {device.serial_number}  {device.name}  [{label}]")
 
-        if not devices:
-            print("No devices returned.")
-            return 0
+        if not serial:
+            if len(devices) == 1:
+                serial = devices[0].serial_number
+                product_type = devices[0].product_type
+                print(f"\nUsing sole device: {serial} (product-type {product_type})")
+            else:
+                print(
+                    "\nSet ECOFLOW_SERIAL (and ECOFLOW_PRODUCT_TYPE if not 83) "
+                    "to fetch telemetry.",
+                    file=sys.stderr,
+                )
+                return 0
 
-        for device in devices:
-            print(f"Device: {device.name}")
-            print(f"  serial: {device.serial_number}")
-            print(f"  type:   {device.product_type}")
+        print(f"API host: {api.api_host}")
+        print(f"Serial:   {serial}")
+        print(f"Model:    {product_type}\n")
 
-            if dump_json:
-                print("  raw discovery:")
-                print(json.dumps(device.raw, indent=2, default=str)[:2000])
+        state = await api.get_system_state(serial, product_type=product_type)
+        print("Parsed telemetry:")
+        for key, value in state.as_dict().items():
+            if key != "serial_number":
+                print(f"  {key}: {value}")
 
-            try:
-                state = await api.get_system_state(device.serial_number)
-            except ApiNotMappedError as err:
-                print(f"  telemetry: NOT MAPPED ({err})")
-                continue
-
-            print("  parsed telemetry:")
-            for key, value in state.as_dict().items():
-                if key != "serial_number":
-                    print(f"    {key}: {value}")
-
-            if dump_json and state.raw:
-                print("  raw telemetry:")
-                print(json.dumps(state.raw, indent=2, default=str)[:2000])
-            print()
-    except ApiNotMappedError as err:
-        print(f"API not mapped yet: {err}", file=sys.stderr)
-        print(
-            "\nCapture the EcoFlow mobile app first — see docs/capture-traffic.md",
-            file=sys.stderr,
-        )
+        if dump_json:
+            raw = await api.get_raw_telemetry(serial, product_type=product_type)
+            print("\nRaw provider-service response:")
+            print(json.dumps(raw, indent=2, default=str)[:8000])
+        print()
+    except Exception as err:
+        print(f"Error: {err}", file=sys.stderr)
         return 2
     finally:
         await api.close()

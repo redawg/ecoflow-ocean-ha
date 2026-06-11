@@ -1,0 +1,19 @@
+{
+  "code": "0",
+  "message": "Success",
+  "data": {
+    "sysLoadPwr": 0.0,
+    "sysGridPwr": 0.0,
+    "mpptPwr": 0.0,
+    "bpPwr": 0.0,
+    "bpSoc": 0,
+    "online": 1,
+    "systemName": "OCEAN Pro",
+    "createTime": "2026-05-19 05:36:47",
+    "location": "United States-California-Desert Hot Springs-66751 San Felipe Road",
+    "timezone": "America/Los_Angeles",
+    "quota": {}
+  },
+  "eagleEyeTraceId": "",
+  "tid": ""
+}

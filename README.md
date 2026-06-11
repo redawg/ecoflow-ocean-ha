@@ -11,10 +11,11 @@ This is a **standalone project** — separate from [hbx-sensorlinx-ha](https://g
 | Phase | State |
 |-------|-------|
 | Repo scaffold | Done |
-| App traffic capture | **Required next step** — see [docs/capture-traffic.md](docs/capture-traffic.md) |
-| `pyecoflowocean` client | Scaffolded — awaiting API mapping |
-| HA integration | Scaffolded — loads after client is mapped |
-| Forest Home deploy | Pending capture + client |
+| Mobile app API mapping | Done (REST via provider-service) |
+| `pyecoflowocean` client | Implemented — login, region detect, telemetry parser |
+| HA integration | Ready for live testing |
+| MQTT real-time | Planned (cert fetch implemented, subscriber not yet) |
+| Configuration writes | Read-only v1; MQTT set path documented |
 
 ## Project layout
 

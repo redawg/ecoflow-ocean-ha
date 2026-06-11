@@ -1,127 +1,161 @@
-# EcoFlow Power Ocean — API notes
+# EcoFlow Power Ocean — API notes (mobile app reverse engineering)
 
-Fill this document after capturing the **EcoFlow mobile app** (see [capture-traffic.md](capture-traffic.md)).
+Documented from community reverse engineering ([niltrip/powerocean](https://github.com/niltrip/powerocean), [tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud), [foxthefox/ioBroker.ecoflow-mqtt](https://github.com/foxthefox/ioBroker.ecoflow-mqtt)) and implemented in `pyecoflowocean`.
 
-Redact tokens, passwords, and account IDs before committing.
+Redact tokens before committing HAR captures.
 
-## Capture metadata
+## Protocol summary
 
-| Field | Value |
-|-------|-------|
-| Date | _YYYY-MM-DD_ |
-| App version | _e.g. 6.x.x_ |
-| Platform | _Android / iOS_ |
-| Region | US |
-| HAR file | `captures/ecoflow-ocean-YYYYMMDD.har` |
-| Inverter serial number | _from app device settings_ |
-
-## Cloud hosts observed
-
-| Host | Protocol | Purpose |
-|------|----------|---------|
-| | | |
-| | | |
+| Layer | Details |
+|-------|---------|
+| Auth host | `https://api.ecoflow.com` (global) |
+| Data host (US) | `https://api-a.ecoflow.com` |
+| Data host (EU) | `https://api-e.ecoflow.com` |
+| Credentials | EcoFlow **app email + password** (not developer API keys) |
+| Password encoding | Base64 of plaintext password in login JSON |
+| Session | Bearer token from login |
+| Live updates | MQTT via `/iot-auth/app/certification` (optional; REST polling implemented first) |
 
 ## Authentication
 
-### Login request
+### Login
 
 ```
-METHOD /path
-Host: ...
+POST https://api.ecoflow.com/auth/login
+Content-Type: application/json
+lang: en_US
 ```
 
-**Request body (structure):**
+**Request body:**
 
 ```json
 {
-  "_replace_with_redacted_sample_": "..."
+  "email": "you@example.com",
+  "password": "<base64-encoded-password>",
+  "scene": "IOT_APP",
+  "userType": "ECOFLOW"
 }
 ```
 
-**Response (token location):**
+**Response fields:**
 
-```json
-{
-  "_replace_with_redacted_sample_": "..."
-}
+| Path | Use |
+|------|-----|
+| `data.token` | Bearer token for REST |
+| `data.user.userId` | MQTT topics + certification |
+
+### MQTT certification (real-time path)
+
+```
+GET https://api.ecoflow.com/iot-auth/app/certification?userId={userId}
+Authorization: Bearer {token}
 ```
 
-| Item | Value |
-|------|-------|
-| Token type | _Bearer / cookie / signed header_ |
-| Token header name | _Authorization / X-Token / ..._ |
-| Refresh mechanism | _endpoint or none_ |
-| Required headers | _lang, platform, app version, ..._ |
+Returns `data.url`, `data.port`, `data.certificateAccount`, `data.certificatePassword`.
+
+MQTT topics (private app API):
+
+| Topic | Purpose |
+|-------|---------|
+| `/app/device/property/{sn}` | Live push |
+| `/app/{userId}/{sn}/thing/property/get` | Request snapshot |
+| `/app/{userId}/{sn}/thing/property/set` | Write configuration |
+
+Payloads may be JSON or base64-wrapped protobuf (`HeaderMessage`).
 
 ## Device discovery
 
-### List devices
+There is no reliable public mobile list endpoint for all accounts. Setup uses:
+
+- **Serial number** from EcoFlow app → device settings
+- **Product type** header (Power Ocean model code)
+
+| Model | `product-type` header |
+|-------|----------------------|
+| Power Ocean | `83` |
+| Power Ocean DC Fit | `85` |
+| Power Ocean Single Phase | `86` |
+| Power Ocean Plus | `87` |
+| Power Ocean Pro (CDO) | `88` |
+
+Account device list (works on CDO Ocean installs):
 
 ```
-METHOD /path
+GET https://api.ecoflow.com/iot-service/user/device
+Authorization: Bearer {token}
 ```
 
-**Sample response fields:**
+Returns `data.bound` — a dict keyed by serial number with `deviceName`, `productType`, `online`, etc.
+Use product type **88** for CDO OCEAN Pro inverters (`HR51…` serials).
 
-| JSON path | Meaning |
-|-----------|---------|
-| | serial number |
-| | device name |
-| | product type |
-
-## Telemetry
-
-### Polling (REST)
+## Telemetry (REST — implemented)
 
 ```
-METHOD /path
+GET https://{api-a|api-e}.ecoflow.com/provider-service/user/device/detail?sn={serial}
+Authorization: Bearer {token}
+product-type: 83
 ```
 
-| JSON path | HA sensor | Unit | Notes |
-|-----------|-----------|------|-------|
-| | `battery_soc` | % | |
-| | `battery_power` | W | + charge / − discharge |
-| | `solar_power` | W | |
-| | `grid_power` | W | + import / − export |
-| | `home_power` | W | |
-| | `status` | text | |
+**Response:** `data` object with top-level energy fields plus nested `data.quota` reports.
 
-### Real-time (MQTT / WebSocket)
+### Primary report blocks
 
-| Item | Value |
-|------|-------|
-| Host | |
-| Topic pattern | |
-| Payload format | _JSON / protobuf_ |
-| Update interval | _seconds_ |
+| Report | Key fields |
+|--------|------------|
+| Top-level `data` | `bpSoc`, `bpPwr`, `mpptPwr`, `sysGridPwr`, `sysLoadPwr`, `online` |
+| `JTS1_ENERGY_STREAM_REPORT` | Same energy flow fields |
+| `ParallelEnergyStreamReport` | Multi-inverter / parallel installs |
+| `JTS1_EMS_HEARTBEAT` | `pcsAPhase`, `pcsBPhase`, `pcsCPhase`, `mpptHeartBeat`, `pcsMeterPower` |
+| `JTS1_EMS_CHANGE_REPORT` | `emsWordMode`, `sysBatChgUpLimit`, `sysBatDsgDownLimit`, `emsFeedPwr`, `emsFeedRatio` |
 
-**Protobuf notes (if applicable):**
+### Energy field mapping
+
+| HA sensor | JSON keys | Notes |
+|-----------|-----------|-------|
+| `battery_soc` | `bpSoc` | % |
+| `battery_power` | `bpPwr`, `emsBpPower` | W; + charge / − discharge |
+| `solar_power` | `mpptPwr`, `pvInvPwr` | W |
+| `grid_power` | `sysGridPwr`, `pcsMeterPower` | W; + import / − export |
+| `home_power` | `sysLoadPwr` | W |
+| `work_mode` | `emsWordMode` | e.g. `WORKMODE_SELFUSE` |
+| `backup_soc_limit` | `sysBatChgUpLimit` | % |
+| `discharge_soc_limit` | `sysBatDsgDownLimit` | % |
+| `feed_power_limit` | `emsFeedPwr` | W |
+| `feed_ratio` | `emsFeedRatio` | % |
+
+### Phase metrics (`JTS1_EMS_HEARTBEAT`)
+
+| Phase | Keys |
+|-------|------|
+| A | `pcsAPhase.vol`, `.amp`, `.actPwr` |
+| B | `pcsBPhase.*` |
+| C | `pcsCPhase.*` |
+
+## Configuration writes (not yet implemented)
+
+Configuration changes in the app use MQTT publish to:
 
 ```
-cmdFunc / message type:
-sample hex:
-decoded fields:
+/app/{userId}/{sn}/thing/property/set
 ```
 
-## Phase metrics (optional)
+Writable fields live mainly in `JTS1_EMS_CHANGE_REPORT` (work mode, backup SOC, export limits). v1 integration is **read-only**.
 
-| JSON path | HA sensor |
-|-----------|-----------|
-| | `phase_a_voltage` |
-| | `phase_a_current` |
-| | `phase_a_power` |
+## Verify locally
 
-## Rate limits and errors
+```powershell
+$env:ECOFLOW_EMAIL = "you@example.com"
+$env:ECOFLOW_PASSWORD = "your-password"
+$env:ECOFLOW_SERIAL = "HJ31..."
+$env:ECOFLOW_SERIAL = "HR51..."
+$env:ECOFLOW_PRODUCT_TYPE = "88"
+python scripts/discover_devices.py
+```
 
-| HTTP code | Meaning |
-|-----------|---------|
-| | |
+Values should match the EcoFlow app energy screen within ~30 seconds.
 
-## Implementation checklist
+## References
 
-- [ ] `pyecoflowocean/auth.py` — login + token refresh
-- [ ] `pyecoflowocean/client.py` — `get_devices()`, `get_system_state()`
-- [ ] `pyecoflowocean/parser.py` — map JSON/protobuf fields
-- [ ] `discover_devices.py` — values match app UI
-- [ ] HA config flow completes on Forest Home
+- [niltrip/powerocean](https://github.com/niltrip/powerocean) — provider-service REST client
+- [tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud) — mobile login + MQTT
+- [foxthefox/ioBroker.ecoflow-mqtt](https://github.com/foxthefox/ioBroker.ecoflow-mqtt) — Power Ocean protobuf field docs
