@@ -77,10 +77,9 @@ def main() -> int:
 
     print(
         "\nDeploy checklist:"
-        "\n  1. pip install -e .  (or copy pyecoflowocean into HA venv)"
-        "\n  2. Copy custom_components/ecoflow_ocean to /config/custom_components/"
-        "\n  3. Restart Home Assistant"
-        "\n  4. Settings → Devices & services → Add integration → EcoFlow Power Ocean"
+        "\n  1. Install via HACS or copy custom_components/ecoflow_ocean to /config/custom_components/"
+        "\n  2. Restart Home Assistant"
+        "\n  3. Settings → Devices & services → Add integration → EcoFlow Power Ocean"
     )
     return 0
 

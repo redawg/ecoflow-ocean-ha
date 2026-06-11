@@ -2,7 +2,7 @@
 
 Bring your **EcoFlow Power Ocean** whole-home battery system into Home Assistant for a consolidated energy view and automations.
 
-This is a **standalone project** — separate from [hbx-sensorlinx-ha](https://github.com/andre/hbx-sensorlinx-ha). Community integrations ([tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud), [niltrip/powerocean](https://github.com/niltrip/powerocean)) do not work for Power Ocean on this hardware, so we reverse-engineer the **EcoFlow mobile app API**.
+This is a **standalone project** — separate from [hbx-sensorlinx-ha](https://github.com/redawg/hass-sensorlinx). Community integrations ([tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud), [niltrip/powerocean](https://github.com/niltrip/powerocean)) do not work for Power Ocean on this hardware, so we reverse-engineer the **EcoFlow mobile app API**.
 
 **v1 scope:** Read-only sensors (battery SOC, solar/grid/home power, status). No backup reserve or work mode controls yet.
 
@@ -20,9 +20,8 @@ This is a **standalone project** — separate from [hbx-sensorlinx-ha](https://g
 
 ```
 ecoflow-ocean-ha/
-  pyecoflowocean/              # pip-installable API client
   custom_components/
-    ecoflow_ocean/             # Home Assistant integration
+    ecoflow_ocean/             # Home Assistant integration (+ bundled pyecoflowocean)
   scripts/
     analyze_har.py             # Summarize captured app traffic
     discover_devices.py        # Login + dump telemetry keys
@@ -49,7 +48,7 @@ python scripts/analyze_har.py captures/ecoflow-ocean-YYYYMMDD.har
 ```
 
 4. Document endpoints in [docs/api-notes.md](docs/api-notes.md).
-5. Implement `pyecoflowocean/auth.py` and `client.py`.
+5. Implement `custom_components/ecoflow_ocean/pyecoflowocean/auth.py` and `client.py`.
 6. Verify:
 
 ```powershell
@@ -60,7 +59,16 @@ python scripts/discover_devices.py
 
 ## Phase 2 — Install on Home Assistant
 
-### Copy the integration
+### HACS install (recommended)
+
+1. HACS → Integrations → ⋮ → Custom repositories
+2. Add `https://github.com/redawg/ecoflow-ocean-ha` as category **Integration**
+3. Search **EcoFlow Power Ocean** → Download
+4. Restart Home Assistant → Add integration
+
+The API client is bundled inside `custom_components/ecoflow_ocean/` (HACS requirement).
+
+### Manual install
 
 ```
 config/
@@ -75,22 +83,6 @@ Ways to install:
 
 - **Samba / File Editor**: paste under `/config/custom_components/`
 - **SSH add-on**: `scp -r custom_components/ecoflow_ocean root@homeassistant.local:/config/custom_components/`
-
-### Install pyecoflowocean
-
-Home Assistant needs the library in its Python environment:
-
-```bash
-# On HA OS with SSH / Terminal add-on, from this repo:
-pip install /config/ecoflow-ocean-ha
-# or publish to PyPI and rely on manifest requirements
-```
-
-For local development:
-
-```powershell
-pip install -e .
-```
 
 ### Add the integration
 
@@ -159,9 +151,9 @@ flowchart LR
   INT --> AUTO[Automations]
 ```
 
-## HACS install (optional)
+## HACS install
 
-This repo includes `hacs.json`. Add it as a custom repository in HACS after publishing to GitHub.
+See **Phase 2 — HACS install (recommended)** above, or add `https://github.com/redawg/ecoflow-ocean-ha` as a custom repository in HACS.
 
 ## Development
 

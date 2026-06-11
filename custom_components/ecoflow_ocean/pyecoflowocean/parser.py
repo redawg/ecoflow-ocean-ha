@@ -5,10 +5,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from pyecoflowocean.exceptions import ApiNotMappedError
-from pyecoflowocean.models import EcoflowDevice, EcoflowOceanState
+from .exceptions import ApiNotMappedError
+from .models import EcoflowDevice, EcoflowOceanState
 
-# Candidate JSON keys seen in other EcoFlow integrations — replace after capture.
 _SOC_KEYS = ("soc", "batterySoc", "bpSoc", "emsBatterySoc")
 _BATTERY_POWER_KEYS = ("bpPwr", "batteryPower", "bpPower", "batPower")
 _SOLAR_POWER_KEYS = ("pvPower", "solarPower", "mpptPower", "pv1Power")
@@ -60,10 +59,7 @@ def parse_device(raw: dict[str, Any]) -> EcoflowDevice | None:
 
 
 def parse_system_state(serial_number: str, payload: dict[str, Any]) -> EcoflowOceanState:
-    """Parse telemetry payload into EcoflowOceanState.
-
-    Raises ApiNotMappedError when no known telemetry keys are present.
-    """
+    """Parse telemetry payload into EcoflowOceanState."""
     if not payload:
         raise ApiNotMappedError("Empty telemetry payload")
 

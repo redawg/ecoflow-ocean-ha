@@ -2,7 +2,6 @@
 """List Power Ocean devices and telemetry keys from your EcoFlow account.
 
 Usage:
-  pip install -e .
   python scripts/discover_devices.py
 
 Environment variables:
@@ -18,6 +17,10 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "custom_components" / "ecoflow_ocean"))
 
 from pyecoflowocean import ApiNotMappedError, EcoflowOcean
 from pyecoflowocean.client import filter_power_ocean_devices

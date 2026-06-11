@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from pyecoflowocean import EcoflowOceanState
+from .pyecoflowocean import EcoflowOceanState
 
 from .const import DOMAIN, MANUFACTURER, MODEL_POWER_OCEAN
 from .coordinator import EcoflowOceanCoordinator

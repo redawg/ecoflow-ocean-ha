@@ -1,11 +1,12 @@
 {
   "domain": "ecoflow_ocean",
   "name": "EcoFlow Power Ocean",
-  "codeowners": ["@andre"],
+  "codeowners": ["@redawg"],
   "config_flow": true,
   "documentation": "https://github.com/redawg/ecoflow-ocean-ha",
   "integration_type": "device",
   "iot_class": "cloud_polling",
-  "requirements": ["pyecoflowocean>=0.1.0"],
+  "issue_tracker": "https://github.com/redawg/ecoflow-ocean-ha/issues",
+  "requirements": ["aiohttp>=3.9"],
   "version": "0.1.0"
 }

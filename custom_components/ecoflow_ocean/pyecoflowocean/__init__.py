@@ -1,13 +1,13 @@
 """Unofficial EcoFlow Power Ocean API client (US app protocol)."""
 
-from pyecoflowocean.client import EcoflowOcean
-from pyecoflowocean.exceptions import (
+from .client import EcoflowOcean
+from .exceptions import (
     ApiNotMappedError,
     AuthenticationError,
     EcoflowOceanError,
     InvalidCredentialsError,
 )
-from pyecoflowocean.models import EcoflowDevice, EcoflowOceanState
+from .models import EcoflowDevice, EcoflowOceanState
 
 __all__ = [
     "ApiNotMappedError",

@@ -7,10 +7,10 @@ from typing import Any
 
 import aiohttp
 
-from pyecoflowocean.auth import EcoflowAuth
-from pyecoflowocean.const import DEFAULT_REGION, DEFAULT_TIMEOUT, DEVICES_PATH, TELEMETRY_PATH
-from pyecoflowocean.exceptions import ApiNotMappedError
-from pyecoflowocean.models import EcoflowDevice, EcoflowOceanState
+from .auth import EcoflowAuth
+from .const import DEFAULT_REGION, DEVICES_PATH, TELEMETRY_PATH
+from .exceptions import ApiNotMappedError
+from .models import EcoflowDevice, EcoflowOceanState
 
 _LOGGER = logging.getLogger(__name__)
 

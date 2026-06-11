@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from pyecoflowocean import ApiNotMappedError, EcoflowOcean, InvalidCredentialsError
+from .pyecoflowocean import ApiNotMappedError, EcoflowOcean, InvalidCredentialsError
 
 from .const import CONF_SERIAL_NUMBER, DOMAIN
 from .coordinator import EcoflowOceanCoordinator

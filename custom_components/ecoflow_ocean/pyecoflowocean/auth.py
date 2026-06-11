@@ -7,8 +7,8 @@ from typing import Any
 
 import aiohttp
 
-from pyecoflowocean.const import AUTH_LOGIN_PATH, DEFAULT_HEADERS, DEFAULT_TIMEOUT
-from pyecoflowocean.exceptions import ApiNotMappedError, AuthenticationError
+from .const import AUTH_LOGIN_PATH, DEFAULT_HEADERS, DEFAULT_TIMEOUT
+from .exceptions import ApiNotMappedError, AuthenticationError
 
 _LOGGER = logging.getLogger(__name__)
 
