@@ -1,0 +1,26 @@
+# Local / Podman Compose helper.
+# From repo root:
+#   podman compose -f web/compose.yml up -d --build
+#   # or: docker compose -f web/compose.yml up -d --build
+
+services:
+  ecoflow-ocean-web:
+    build:
+      context: ..
+      dockerfile: web/Containerfile
+    image: ecoflow-ocean-web:latest
+    container_name: ecoflow-ocean-web
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      DATA_DIR: /data
+      SAMPLE_INTERVAL_S: "30"
+      REST_POLL_INTERVAL_S: "60"
+    volumes:
+      - ecoflow-ocean-data:/data:Z
+    restart: unless-stopped
+
+volumes:
+  ecoflow-ocean-data:

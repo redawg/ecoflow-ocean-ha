@@ -63,6 +63,17 @@ MQTT topics (private app API):
 
 Payloads may be JSON or base64-wrapped protobuf (`HeaderMessage`).
 
+### CDO Ocean Pro MQTT notes (type 88)
+
+Live capture against `HR51…` (US, `mqtt.ecoflow.com:8883`) shows:
+
+- REST `/provider-service/user/device/detail` returns online metadata with **empty `quota`** and zero power fields.
+- MQTT `/app/device/property/{sn}` pushes **binary protobuf** (not JSON).
+- Decoded headers use `src=96`, `cmd_func=254`, `cmd_id=25` (Gen3), not the classic Power Ocean `cmd_func=96` / `JTS1_*` reports.
+- Community Power Ocean protobuf schemas ([foxthefox/ioBroker.ecoflow-mqtt](https://github.com/foxthefox/ioBroker.ecoflow-mqtt) `ef_powerocean_data.js`) target `cmdFunc=96` and do not yet decode these CDO Gen3 frames.
+
+Next step: reverse-engineer `cmdFunc=254` pdata for Ocean Pro (energy stream + SOC) from captured MQTT hex, then wire into `protobuf_decoder.py`.
+
 ## Device discovery
 
 There is no reliable public mobile list endpoint for all accounts. Setup uses:
@@ -154,8 +165,86 @@ python scripts/discover_devices.py
 
 Values should match the EcoFlow app energy screen within ~30 seconds.
 
+## Official EcoFlow Developer API (PowerOcean / "PP2") schema
+
+`https://developer.ecoflow.com/us/document/PP2` documents a **separate**,
+official API surface (`open.ecoflow.com`, accessKey/secretKey + HMAC-SHA256
+signing) distinct from the private mobile-app API we currently use
+(`api.ecoflow.com`, email/password login). It's a JS SPA, so it doesn't
+render via a plain HTTP fetch — needs a real browser to read.
+
+**Confirms our existing field names/conventions:**
+
+- `sysGridPwr` — negative = exporting (matches what we already use).
+- `bpSoc`, `mpptPwr`, `sysLoadPwr`, `bpPwr` — same names we already decode.
+- `pcsAPhase` / `pcsBPhase` / `pcsCPhase` — same phase objects.
+- `mpptHeartBeat[].mpptPv[]` — per-string `{vol, amp, pwr}`, matches our
+  per-string decoding.
+
+> **Caveat:** a browser-extraction pass on this page also reported
+> "`bpPwr`: negative = charging" — that's backwards from both our own
+> passing test suite (`test_battery_pack_multi_header`, asserts
+> `power_w` is negative for a pack discharging at 10 A) and the
+> community-verified convention (`tolwi/hassio-ecoflow-cloud` issue #686:
+> `<0 discharge / >0 charge` for the equivalent Stream AC Pro field). Treat
+> that specific claim as a probable transcription error until confirmed by
+> re-reading the page directly — it has **not** been applied here, and the
+> positive-`bpPwr`-during-a-confirmed-discharge anomaly from the
+> 2026-07-19 capture (see `docs/inverter-field-mapping.md`) is still an open
+> question, not resolved by this.
+
+**New fields not yet in our decoder** (per-phase reactive/apparent power,
+plus optional add-on modules):
+
+| Field | Type | Description |
+|---|---|---|
+| `pcsAPhase.reactPwr` / `pcsBPhase.reactPwr` / `pcsCPhase.reactPwr` | float | Reactive power per phase |
+| `pcsAPhase.apparentPwr` / `pcsBPhase.apparentPwr` / `pcsCPhase.apparentPwr` | float | Apparent power per phase |
+| `evPwr` | float | EV charger (PowerPulse) power |
+| `chargingStatus` | string | EV charger status, e.g. `EV_CHG_STS_AVAILABLE` |
+| `errorCode` | string | Binary-array error code |
+| `sectorA.tempCurr` / `sectorB.tempCurr` | float | PowerHeat zone temperatures |
+| `hpMaster.tempInlet` / `.tempOutlet` / `.tempAmbient` | float | PowerHeat heat-pump temps |
+| `sectorDhw.tempCurr` | float | PowerHeat domestic hot water temp |
+| `hrEnergyStream[].temp` / `.hrPwr` | float | PowerGlow (water heating rod) temp/power |
+| `emsErrCode.errCode[]` | int[] | Module error codes (601 = PowerHeat, 602 = PowerGlow) |
+
+We don't have PowerHeat/PowerGlow hardware fields wired up in
+`inverter_decoder.py` — only relevant if that hardware is present.
+
+**Official REST endpoints** (require Developer API keys, HMAC-signed):
+
+- `POST /iot-open/sign/device/quota` — named-field snapshot (equivalent to
+  our reverse-engineered protobuf decode, but JSON with stable names).
+- `GET /iot-open/sign/device/quota/all` — every quota field at once.
+- `POST /iot-open/sign/device/quota/data` — **historical/aggregated data**,
+  max 1-week span, returns named `{indexName, indexValue, unit}` records
+  (e.g. `pv_to_powerglow` in kWh). We have no equivalent today — this could
+  power weekly/monthly energy totals without building our own long-term
+  stats pipeline.
+
+**Official MQTT topics** (also under the Developer API's cert scheme, not
+our current one):
+
+| Topic | Purpose |
+|---|---|
+| `/open/${certificateAccount}/${sn}/quota` | Device → app telemetry push |
+| `/open/${certificateAccount}/${sn}/status` | Device → app online/offline (`status`: 0/1) |
+
+**Open question:** our current mobile-app REST endpoint
+(`/provider-service/user/device/detail`) returns **empty quota** for this
+specific CDO Ocean Pro (product type `88`, `HR51…`) unit — that's why we
+reverse-engineer the MQTT protobuf instead. It's untested whether the
+*official* Developer API's `/iot-open/sign/device/quota` endpoint actually
+returns populated data for this same unit. If it does, it would give clean
+named JSON instead of undecoded protobuf for the fields it covers — but it
+requires registering for Developer API access and reworking `auth.py` to
+support HMAC-signed requests alongside (or instead of) the current
+email/password login.
+
 ## References
 
 - [niltrip/powerocean](https://github.com/niltrip/powerocean) — provider-service REST client
 - [tolwi/hassio-ecoflow-cloud](https://github.com/tolwi/hassio-ecoflow-cloud) — mobile login + MQTT
 - [foxthefox/ioBroker.ecoflow-mqtt](https://github.com/foxthefox/ioBroker.ecoflow-mqtt) — Power Ocean protobuf field docs
+- [developer.ecoflow.com/us/document/PP2](https://developer.ecoflow.com/us/document/PP2) — official PowerOcean Developer API schema (requires a real browser to render)

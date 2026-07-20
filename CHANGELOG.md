@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Add EcoFlow cloud MQTT listener (`paho-mqtt`) with latestQuotas keepalive
+- Prefer MQTT telemetry over empty REST quota stubs when available
+- Add protobuf decoder scaffold for Power Ocean `JTS1_*` messages
+- CDO Ocean Pro (type 88) confirmed to push Gen3 `cmdFunc=254` frames — mapping still WIP
+- Bump iot_class to cloud_push
+
 ## 0.2.0
 
 - Implement mobile app API client (login, US/EU region detect, provider-service telemetry)

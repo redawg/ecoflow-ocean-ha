@@ -1,30 +1,20 @@
 title: EcoFlow Power Ocean
 views:
-  - title: Energy
+  - title: Overview
     path: ecoflow-ocean
     icon: mdi:solar-power
     cards:
       - type: markdown
         content: |
           ## Power Ocean live view
-          Replace `YOUR_SN` below with your inverter serial number (or rename entities after setup).
+          Replace `YOUR_SN` with your inverter serial number after setup.
 
-      - type: entities
-        title: Battery
+      - type: glance
+        title: At a glance
         entities:
           - entity: sensor.YOUR_SN_battery_soc
-          - entity: sensor.YOUR_SN_battery_power
-
-      - type: entities
-        title: Power flows
-        entities:
-          - entity: sensor.YOUR_SN_solar_power
-          - entity: sensor.YOUR_SN_grid_power
-          - entity: sensor.YOUR_SN_home_power
-
-      - type: entities
-        title: Status
-        entities:
+          - entity: binary_sensor.YOUR_SN_online
+          - entity: sensor.YOUR_SN_work_mode
           - entity: sensor.YOUR_SN_status
 
       # Optional: install power-flow-card-plus from HACS, then uncomment:
@@ -34,3 +24,92 @@ views:
       #     grid: sensor.YOUR_SN_grid_power
       #     solar: sensor.YOUR_SN_solar_power
       #     home: sensor.YOUR_SN_home_power
+
+      - type: entities
+        title: Battery
+        entities:
+          - entity: sensor.YOUR_SN_battery_soc
+          - entity: sensor.YOUR_SN_battery_power
+          - entity: sensor.YOUR_SN_backup_soc_limit
+          - entity: sensor.YOUR_SN_discharge_soc_limit
+
+      - type: entities
+        title: Power flows
+        entities:
+          - entity: sensor.YOUR_SN_solar_power
+          - entity: sensor.YOUR_SN_grid_power
+          - entity: sensor.YOUR_SN_home_power
+
+      - type: entities
+        title: Export limits
+        entities:
+          - entity: sensor.YOUR_SN_feed_power_limit
+          - entity: sensor.YOUR_SN_feed_ratio
+
+      - type: history-graph
+        title: Power (24h)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.YOUR_SN_solar_power
+          - entity: sensor.YOUR_SN_grid_power
+          - entity: sensor.YOUR_SN_home_power
+          - entity: sensor.YOUR_SN_battery_power
+
+      - type: history-graph
+        title: Battery SOC (24h)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.YOUR_SN_battery_soc
+
+  - title: Phases
+    path: ecoflow-ocean-phases
+    icon: mdi:transmission-tower
+    cards:
+      - type: entities
+        title: Phase A
+        entities:
+          - entity: sensor.YOUR_SN_phase_a_voltage
+          - entity: sensor.YOUR_SN_phase_a_current
+          - entity: sensor.YOUR_SN_phase_a_power
+
+      - type: entities
+        title: Phase B
+        entities:
+          - entity: sensor.YOUR_SN_phase_b_voltage
+          - entity: sensor.YOUR_SN_phase_b_current
+          - entity: sensor.YOUR_SN_phase_b_power
+
+      - type: entities
+        title: Phase C
+        entities:
+          - entity: sensor.YOUR_SN_phase_c_voltage
+          - entity: sensor.YOUR_SN_phase_c_current
+          - entity: sensor.YOUR_SN_phase_c_power
+
+      - type: history-graph
+        title: Phase power (24h)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.YOUR_SN_phase_a_power
+          - entity: sensor.YOUR_SN_phase_b_power
+          - entity: sensor.YOUR_SN_phase_c_power
+
+  - title: System
+    path: ecoflow-ocean-system
+    icon: mdi:cog
+    cards:
+      - type: entities
+        title: Status
+        entities:
+          - entity: binary_sensor.YOUR_SN_online
+          - entity: sensor.YOUR_SN_status
+          - entity: sensor.YOUR_SN_work_mode
+          - entity: sensor.YOUR_SN_last_updated
+
+      - type: markdown
+        content: |
+          ### Energy Dashboard (kWh)
+          The EcoFlow API exposes instantaneous power (W), not cumulative kWh.
+          Import [packages/ecoflow-ocean-energy.yaml](../packages/ecoflow-ocean-energy.yaml)
+          into HA to create integration sensors, then add them under
+          **Settings → Dashboards → Energy**.

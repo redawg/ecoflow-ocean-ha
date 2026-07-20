@@ -52,6 +52,10 @@ class EcoflowAuth:
         return self._user_name
 
     @property
+    def user_id(self) -> str | None:
+        return self._user_id
+
+    @property
     def mqtt_cert(self) -> dict[str, Any] | None:
         return self._mqtt_cert
 

@@ -15,7 +15,7 @@ from .coordinator import EcoflowOceanCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -38,6 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = EcoflowOceanCoordinator(hass, entry, api)
     try:
+        await coordinator.async_start_mqtt()
         await coordinator.async_config_entry_first_refresh()
     except Exception as err:
         await api.close()

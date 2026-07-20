@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EcoFlow Ocean · Power flow</title>
+  <link rel="stylesheet" href="/static/styles.css?v=20260720c" />
+  <link rel="stylesheet" href="/static/flow.css?v=20260720c" />
+  <script src="/static/flow-core.js?v=20260720c" defer></script>
+  <script src="/static/flow.js?v=20260718p" defer></script>
+</head>
+<body class="flow-page">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Power flow card</p>
+      <h1 id="pageTitle">EcoFlow Ocean</h1>
+    </div>
+    <div class="header-right">
+      <nav class="page-nav" aria-label="Pages">
+        <a href="/" id="navDash">Dashboard</a>
+        <a href="/flow" id="navFlow" class="active">Flow</a>
+      </nav>
+      <nav class="site-switch" id="siteSwitch" aria-label="Homes"></nav>
+      <div class="status-pill" id="connStatus">Connecting…</div>
+    </div>
+  </header>
+
+  <main class="flow-main">
+    <section class="card flow-stage-card">
+      <div class="card-head">
+        <h2>System power flow</h2>
+        <div class="string-controls">
+          <label class="toggle-all" title="Show daily kWh on each node">
+            <input type="checkbox" id="showDaily" checked />
+            Daily totals
+          </label>
+          <span class="meta" id="flowMeta">—</span>
+        </div>
+      </div>
+
+      <div class="flow-stage" id="flowStage">
+        <svg
+          class="flow-svg"
+          id="flowSvg"
+          viewBox="0 0 1100 780"
+          role="img"
+          aria-label="Animated EcoFlow Ocean power flow"
+        >
+          <defs>
+            <!-- filterUnits="userSpaceOnUse" with a fixed region covering the
+                 whole diagram (viewBox is 0 0 1100 780) — NOT the default
+                 percent-of-bounding-box region. The straight flow-stroke
+                 rails (Solar→Inverter, Inverter→Panel, Panel→House, etc.)
+                 are perfectly horizontal/vertical, so their geometry
+                 bounding box is zero-width/zero-height in one axis; with the
+                 default "-50%/200%" region that's 200% of zero = zero,
+                 which silently clips the glow (and the whole filtered
+                 stroke) to nothing in some renderers. A fixed absolute
+                 region sidesteps that entirely. -->
+            <filter id="glow" filterUnits="userSpaceOnUse" x="-100" y="-100" width="1300" height="980">
+              <feGaussianBlur stdDeviation="2.8" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <!-- Node boxes use their own objectBoundingBox filter (rather than
+                 the large fixed userSpaceOnUse region above, which some
+                 WebKit/Safari builds clip against the SVG's overflow:hidden
+                 ancestor and cut the box's own corners off). -->
+            <filter id="glowBox" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="2.8" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <linearGradient id="socGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#3ecf8e" />
+              <stop offset="100%" stop-color="#7dffb2" />
+            </linearGradient>
+            <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f0b429" />
+              <stop offset="100%" stop-color="#ffd56a" />
+            </linearGradient>
+            <!-- Flowing-line gradients: a single smooth fade — saturated
+                 accent color at the power source end, fading down to the
+                 white base at the destination end — spanning the FULL
+                 length of the line (not a short repeating band). JS sets
+                 each gradient's x2/y2 to that path's actual on-screen
+                 length at startup (see sizeGradients() in flow-core.js) and
+                 nudges `gradientTransform` by a small bounded amount every
+                 frame (see tick()) for a gentle "breathing" motion in the
+                 direction of power flow.
+                 Deliberately NOT spreadMethod="repeat": with a gradient
+                 already sized to the whole line, re-tiling it while sliding
+                 made the single fade look like it "ran out" mid-line, i.e.
+                 a colored band drifting through an otherwise-white line —
+                 the "trickle" artifact. Default (pad) spread + a small
+                 excursion keeps the fade anchored end-to-end. -->
+            <linearGradient id="gradSolarInv" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="105">
+              <stop offset="0%" stop-color="#ffd56a" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+            <!-- Discharge: battery is the source (path start) → inverter. -->
+            <linearGradient id="gradBatDischarge" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="75" y2="0">
+              <stop offset="0%" stop-color="#3ecf8e" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+            <!-- Charging: inverter (path end) is the source → battery. -->
+            <linearGradient id="gradBatCharge" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="75" y2="0">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85" />
+              <stop offset="100%" stop-color="#ffd56a" stop-opacity="1" />
+            </linearGradient>
+            <!-- Inverter → Panel, solar-fed: same yellow leg as Solar →
+                 Inverter above, so the color reads as one continuous flow
+                 through the whole system rather than switching to blue. -->
+            <linearGradient id="gradInvPanelSolar" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="95" y2="0">
+              <stop offset="0%" stop-color="#ffd56a" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+            <!-- Inverter → Panel while the battery is discharging: keep it
+                 green all the way through so the battery-sourced power
+                 reads as one continuous flow. -->
+            <linearGradient id="gradInvPanelBattery" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="95" y2="0">
+              <stop offset="0%" stop-color="#3ecf8e" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+            <!-- Export sourced purely from a discharging battery (no solar). -->
+            <linearGradient id="gradGridExport" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="30.49" y2="-25.91">
+              <stop offset="0%" stop-color="#3ecf8e" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+            <!-- Import: grid (path end) is the source → panel. -->
+            <linearGradient id="gradGridImport" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="30.49" y2="-25.91">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85" />
+              <stop offset="100%" stop-color="#5b9fd4" stop-opacity="1" />
+            </linearGradient>
+            <!-- Export fed purely by solar (no battery discharge): yellow,
+                 continuing the same leg unbroken from Solar → Inverter →
+                 Panel all the way out to the Grid. -->
+            <linearGradient id="gradGridExportSolar" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="30.49" y2="-25.91">
+              <stop offset="0%" stop-color="#ffd56a" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+            <!-- Export fed by both solar AND battery discharge at once: a
+                 yellow half fading through white to a green half, same
+                 vector as gradGridExport so it shares the same phase
+                 animation and is sized to the same full line length. -->
+            <linearGradient id="gradGridExportMixed" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="30.49" y2="-25.91">
+              <stop offset="0%" stop-color="#ffd56a" stop-opacity="1" />
+              <stop offset="45%" stop-color="#ffffff" stop-opacity="0.85" />
+              <stop offset="55%" stop-color="#ffffff" stop-opacity="0.85" />
+              <stop offset="100%" stop-color="#3ecf8e" stop-opacity="1" />
+            </linearGradient>
+            <linearGradient id="gradPanelHouse" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="70">
+              <stop offset="0%" stop-color="#e07a5f" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+            <linearGradient id="gradPanelEv" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="50" y2="115">
+              <stop offset="0%" stop-color="#9b7ede" stop-opacity="1" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+            </linearGradient>
+          </defs>
+
+          <!-- Static rails -->
+          <g class="flow-rails" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path id="railSolarInv" d="M420 200 L420 305" />
+            <path id="railBatInv" d="M260 390 C290 390, 305 390, 335 390" />
+            <path id="railInvPanel" d="M505 390 C530 390, 565 390, 600 390" />
+            <path id="railPanelGrid" d="M700 305 L700 170 L850 170" />
+            <path id="railPanelHouse" d="M700 475 L700 545" />
+            <path id="railPanelEv" d="M800 390 L960 390 L960 545" />
+          </g>
+
+          <!-- Animated stroke overlays -->
+          <g class="flow-strokes" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path id="strokeSolarInv" class="flow-stroke" d="M420 200 L420 305" />
+            <path id="strokeBatInv" class="flow-stroke" d="M260 390 C290 390, 305 390, 335 390" />
+            <path id="strokeInvPanel" class="flow-stroke" d="M505 390 C530 390, 565 390, 600 390" />
+            <path id="strokePanelGrid" class="flow-stroke" d="M700 305 L700 170 L850 170" />
+            <path id="strokePanelHouse" class="flow-stroke" d="M700 475 L700 545" />
+            <path id="strokePanelEv" class="flow-stroke" d="M800 390 L960 390 L960 545" />
+          </g>
+
+          <!-- PV strings -->
+          <g id="pvStrings" class="pv-strings"></g>
+
+          <!-- Solar node -->
+          <g class="node-g solar" transform="translate(420 145)">
+            <rect class="node-box" x="-110" y="-55" width="220" height="110" rx="18" />
+            <circle class="node-icon-ring" cx="-72" cy="0" r="22" />
+            <text class="node-icon" x="-72" y="7">☀</text>
+            <text class="node-label" x="18" y="-28">Solar</text>
+            <text class="node-value" id="nSolarW" x="18" y="6">—</text>
+            <text class="node-sub daily" id="nSolarDay" x="18" y="30">today —</text>
+          </g>
+
+          <!-- Battery node -->
+          <g class="node-g battery" transform="translate(150 390)">
+            <rect class="node-box" x="-110" y="-75" width="220" height="150" rx="18" />
+            <text class="node-label" y="-50">Battery</text>
+            <text class="node-value" id="nBatW" y="-18">—</text>
+            <text class="node-sub" id="nBatDir" y="4">—</text>
+            <!-- SOC bar -->
+            <rect class="soc-track" x="-80" y="18" width="160" height="14" rx="7" />
+            <rect class="soc-fill" id="socFill" x="-80" y="18" width="0" height="14" rx="7" />
+            <text class="node-sub" id="nBatSoc" y="52">SOC —</text>
+            <text class="node-sub daily" id="nBatDay" y="70">—</text>
+          </g>
+
+          <!-- Inverter hub: the box IS the product photo, with self-sufficiency
+               (and eventually self-consumption watts) called out underneath. -->
+          <g class="node-g inverter" transform="translate(420 390)">
+            <rect class="node-box hub-box" x="-85" y="-85" width="170" height="170" rx="20" />
+            <text class="node-label" x="0" y="-68">Inverter</text>
+            <image
+              class="node-photo"
+              x="-33"
+              y="-60"
+              width="66"
+              height="130"
+              href="/static/img/gear/inverter-tower.png?v=20260719c"
+              preserveAspectRatio="xMidYMid meet"
+            />
+            <text class="node-sub" id="nSelfSuf" x="0" y="76">Self Sufficient —</text>
+          </g>
+
+          <!-- Smart Panel hub -->
+          <g class="node-g panel" transform="translate(700 390)">
+            <rect class="node-box hub-box" x="-100" y="-85" width="200" height="170" rx="20" />
+            <image
+              class="node-photo"
+              x="-90"
+              y="-74"
+              width="64"
+              height="148"
+              href="/static/img/gear/panel-tower.png?v=20260720c"
+              preserveAspectRatio="xMidYMid meet"
+            />
+            <text class="node-label" x="-15" y="-42">Panel</text>
+            <text class="node-value small" id="nPanelMode" x="-15" y="-10">Smart Panel</text>
+            <text class="node-sub" id="nPanelOnline" x="-15" y="14">—</text>
+            <text class="node-sub" id="nPanelLoad" x="-15" y="36">circuits —</text>
+            <text class="node-sub daily" id="nPanelHint" x="-15" y="56">live MQTT</text>
+          </g>
+
+          <!-- Grid node -->
+          <g class="node-g grid" transform="translate(960 170)">
+            <rect class="node-box" x="-110" y="-75" width="220" height="150" rx="18" />
+            <text class="node-label" y="-50">Grid</text>
+            <text class="node-value" id="nGridW" y="-18">—</text>
+            <text class="node-sub" id="nGridDir" y="4">—</text>
+            <text class="node-sub daily" id="nGridImport" y="28">import —</text>
+            <text class="node-sub daily" id="nGridExport" y="48">export —</text>
+            <text class="node-sub" id="nGridFreq" y="68"></text>
+          </g>
+
+          <!-- House essential (directly below the Smart Panel hub) -->
+          <g class="node-g home" transform="translate(700 610)">
+            <rect class="node-box" x="-110" y="-65" width="220" height="130" rx="18" />
+            <text class="node-label" y="-38">House</text>
+            <text class="node-value" id="nHomeW" y="-6">—</text>
+            <text class="node-sub" id="nHomeHint" y="18">essential load</text>
+            <text class="node-sub daily" id="nHomeDay" y="40">today —</text>
+          </g>
+
+          <!-- EV non-essential -->
+          <g class="node-g ev" transform="translate(960 610)">
+            <rect class="node-box" x="-110" y="-65" width="220" height="130" rx="18" />
+            <image
+              class="node-photo"
+              x="-100"
+              y="-31"
+              width="54"
+              height="62"
+              href="/static/img/gear/ev-charger.png?v=20260719b"
+              preserveAspectRatio="xMidYMid meet"
+            />
+            <text class="node-label" x="12" y="-38">EV</text>
+            <text class="node-value" id="nEvW" x="12" y="-6">—</text>
+            <text class="node-sub" id="nEvSub" x="12" y="18">non-essential</text>
+            <text class="node-sub daily" id="nEvDay" x="12" y="40">today —</text>
+          </g>
+
+          <!-- Mini pack SOC row -->
+          <g id="packRow" class="pack-row"></g>
+
+          <!-- Connector "ports" — a small grey socket where each line meets
+               a node box, at both the source and destination end. Drawn on
+               top of the node boxes so the socket reads as set into the
+               box's edge rather than being hidden behind it. -->
+          <!-- data-orient is the direction AWAY from the node box this port
+               sits on (the side of the little plug that gets rounded); the
+               opposite side stays flush/square against the box edge. The `d`
+               path itself is computed at runtime by renderPorts() in
+               flow-core.js from cx/cy/orient, since SVG <rect> can't do
+               per-corner radii. Every port sits on the centerline of the box
+               side it belongs to, so lines always enter boxes dead-center. -->
+          <g class="flow-ports">
+            <path class="flow-port" data-cx="420" data-cy="90" data-orient="up" />
+            <path class="flow-port" data-cx="420" data-cy="200" data-orient="down" />
+            <path class="flow-port" data-cx="420" data-cy="305" data-orient="up" />
+            <path class="flow-port" data-cx="260" data-cy="390" data-orient="right" />
+            <path class="flow-port" data-cx="335" data-cy="390" data-orient="left" />
+            <path class="flow-port" data-cx="505" data-cy="390" data-orient="right" />
+            <path class="flow-port" data-cx="600" data-cy="390" data-orient="left" />
+            <path class="flow-port" data-cx="700" data-cy="305" data-orient="up" />
+            <path class="flow-port" data-cx="850" data-cy="170" data-orient="left" />
+            <path class="flow-port" data-cx="700" data-cy="475" data-orient="down" />
+            <path class="flow-port" data-cx="700" data-cy="545" data-orient="up" />
+            <path class="flow-port" data-cx="800" data-cy="390" data-orient="right" />
+            <path class="flow-port" data-cx="960" data-cy="545" data-orient="up" />
+          </g>
+
+          <!-- Live watt labels on lines -->
+          <g class="flow-labels">
+            <text id="lblSolarInv" class="flow-label" x="432" y="256">—</text>
+            <text id="lblBatInv" class="flow-label" x="240" y="368">—</text>
+            <text id="lblInvPanel" class="flow-label" x="555" y="372">—</text>
+            <text id="lblPanelGrid" class="flow-label" x="715" y="255">—</text>
+            <text id="lblPanelHouse" class="flow-label" x="712" y="514">—</text>
+            <text id="lblPanelEv" class="flow-label" x="815" y="475">—</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="flow-legend">
+        <span><i class="dot solar"></i> Solar produce</span>
+        <span><i class="dot battery"></i> Battery charge</span>
+        <span><i class="dot bat-dsg"></i> Battery discharge</span>
+        <span><i class="dot panel"></i> Inverter → Panel</span>
+        <span><i class="dot grid-in"></i> Grid import</span>
+        <span><i class="dot grid-out"></i> Grid export</span>
+        <span><i class="dot home"></i> House</span>
+        <span><i class="dot ev"></i> EV</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Sunsynk-style animated flow · EcoFlow Ocean live MQTT</span>
+  </footer>
+</body>
+</html>

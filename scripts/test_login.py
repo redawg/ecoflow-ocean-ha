@@ -14,7 +14,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "custom_components" / "ecoflow_ocean"))
+
+from env_loader import load_dotenv
+
+load_dotenv()
 
 from pyecoflowocean import EcoflowOcean, InvalidCredentialsError
 from pyecoflowocean.const import PRODUCT_TYPE_POWER_OCEAN
@@ -28,6 +33,7 @@ async def main() -> int:
 
     if not email or not password:
         print("Missing ECOFLOW_EMAIL or ECOFLOW_PASSWORD.", file=sys.stderr)
+        print("Tip: run python scripts/setup_env.py", file=sys.stderr)
         return 1
 
     api = EcoflowOcean(

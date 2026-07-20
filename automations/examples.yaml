@@ -1,12 +1,15 @@
 # Example automations for EcoFlow Power Ocean
 # Replace YOUR_SN with your inverter serial number after integration setup.
+#
+# Import via Settings → Automations → Create automation → Edit in YAML,
+# or copy into automations.yaml / packages.
 
 - alias: EcoFlow low battery SOC alert
   description: Notify when battery drops below 20%
   trigger:
-    - platform: numeric_state
-      entity_id: sensor.YOUR_SN_battery_soc
-      below: 20
+    - platform: state
+      entity_id: binary_sensor.YOUR_SN_low_battery
+      to: "on"
   action:
     - service: notify.notify
       data:
@@ -14,11 +17,11 @@
         message: "Battery SOC is {{ states('sensor.YOUR_SN_battery_soc') }}%"
 
 - alias: EcoFlow grid export notification
-  description: Notify when exporting to grid (>500 W export for 5 min)
+  description: Notify when exporting to grid (>100 W export for 5 min)
   trigger:
-    - platform: numeric_state
-      entity_id: sensor.YOUR_SN_grid_power
-      below: -500
+    - platform: state
+      entity_id: binary_sensor.YOUR_SN_grid_exporting
+      to: "on"
       for:
         minutes: 5
   action:
@@ -28,15 +31,52 @@
         message: "Exporting {{ states('sensor.YOUR_SN_grid_power') | float(0) | abs }} W to grid"
 
 - alias: EcoFlow system offline alert
-  description: Alert when status sensor is unavailable for 10 minutes
+  description: Alert when the system goes offline for 10 minutes
   trigger:
     - platform: state
-      entity_id: sensor.YOUR_SN_status
-      to: unavailable
+      entity_id: binary_sensor.YOUR_SN_online
+      to: "off"
       for:
         minutes: 10
   action:
     - service: notify.notify
       data:
         title: Power Ocean
-        message: "Power Ocean telemetry has been unavailable for 10 minutes"
+        message: "Power Ocean has been offline for 10 minutes"
+
+- alias: EcoFlow high solar production
+  description: Notify when solar exceeds 5 kW
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.YOUR_SN_solar_power
+      above: 5000
+      for:
+        minutes: 2
+  condition:
+    - condition: state
+      entity_id: binary_sensor.YOUR_SN_online
+      state: "on"
+  action:
+    - service: notify.notify
+      data:
+        title: Power Ocean
+        message: "Solar producing {{ states('sensor.YOUR_SN_solar_power') }} W"
+
+- alias: EcoFlow stale telemetry alert
+  description: Alert when data has not updated in 15 minutes
+  trigger:
+    - platform: template
+      value_template: >
+        {% set updated = states.sensor.YOUR_SN_last_updated.last_changed %}
+        {{ (now() - updated).total_seconds() > 900 }}
+      for:
+        minutes: 1
+  condition:
+    - condition: state
+      entity_id: binary_sensor.YOUR_SN_online
+      state: "on"
+  action:
+    - service: notify.notify
+      data:
+        title: Power Ocean
+        message: "Telemetry stale — last update {{ states('sensor.YOUR_SN_last_updated') }}"

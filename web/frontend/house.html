@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EcoFlow Ocean · House</title>
+  <link rel="stylesheet" href="/static/styles.css?v=20260720c" />
+  <link rel="stylesheet" href="/static/house.css?v=20260720c" />
+  <script src="/static/house.js?v=20260720c" defer></script>
+</head>
+<body class="house-page">
+  <header class="top house-top">
+    <div>
+      <p class="eyebrow">House view</p>
+      <h1 id="pageTitle">EcoFlow Ocean</h1>
+    </div>
+    <div class="header-right">
+      <nav class="page-nav" aria-label="Pages">
+        <a href="/" id="navDash">Dashboard</a>
+        <a href="/house" id="navHouse" class="active">House</a>
+      </nav>
+      <nav class="site-switch" id="siteSwitch" aria-label="Homes"></nav>
+      <div class="status-pill" id="connStatus">Connecting…</div>
+    </div>
+  </header>
+
+  <main class="house-main">
+    <div class="house-stage" id="houseStage">
+      <img
+        class="house-bg"
+        id="houseBg"
+        src="/static/img/house-aerial-left-v3.png?v=20260720c"
+        alt="Aerial view of desert house with solar array, pitched parapet roof, driveway, garage and rear fencing, left wall visible"
+        draggable="false"
+      />
+
+      <!-- Interactive PV modules over the roof arrays (colors follow live string power) -->
+      <svg class="pv-overlay" id="pvOverlay" viewBox="0 0 1000 625" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <!-- filterUnits="userSpaceOnUse" with a fixed region instead of a
+               percent-of-bounding-box one — avoids the region collapsing to
+               zero for any perfectly axis-aligned shape (see flow.html for
+               the full explanation of this bug). -->
+          <filter id="glow" filterUnits="userSpaceOnUse" x="-100" y="-100" width="1200" height="825">
+            <feGaussianBlur stdDeviation="1.6" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <g id="pvArrayMain" class="pv-array"></g>
+        <g id="pvArraySec" class="pv-array"></g>
+      </svg>
+
+      <article class="h-card grid" id="cardGrid" style="left: 2%; top: 5%;">
+        <header>
+          <span class="h-label">Grid</span>
+          <span class="h-badge" id="gridBadge">—</span>
+        </header>
+        <p class="h-value" id="gridW">—</p>
+        <p class="h-sub" id="gridDir">—</p>
+        <dl class="h-meta">
+          <div><dt>Voltage</dt><dd id="gridV">—</dd></div>
+          <div><dt>Import</dt><dd id="gridImport">—</dd></div>
+          <div><dt>Export</dt><dd id="gridExport">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="h-card solar" id="cardSolar" style="left: 38%; top: 4%;">
+        <header>
+          <span class="h-label">Solar</span>
+        </header>
+        <p class="h-value" id="solarW">—</p>
+        <p class="h-sub" id="solarDay">today —</p>
+      </article>
+
+      <article class="h-card home" id="cardHome" style="right: 2%; top: 5%; left: auto;">
+        <header>
+          <span class="h-label">House load</span>
+        </header>
+        <p class="h-value" id="homeW">—</p>
+        <p class="h-sub" id="homeHint">essential (ex-EV)</p>
+      </article>
+
+      <article class="h-card ev" id="cardEv" style="right: 2%; bottom: 6%; top: auto; left: auto;">
+        <header>
+          <span class="h-label">EV</span>
+          <span class="h-badge" id="evBadge">—</span>
+        </header>
+        <p class="h-value" id="evW">—</p>
+        <p class="h-sub" id="evSub">charger</p>
+      </article>
+
+      <!-- Elevation: Panel + Inverter + Bat1/2 west of windows; Bat3/4 east -->
+      <section class="gear-cluster gear-west" aria-label="Panel, inverter, batteries west of windows">
+        <figure class="gear-unit panel" id="gearPanel">
+          <img src="/static/img/gear/panel.png" alt="EcoFlow Smart Panel" draggable="false" />
+          <figcaption>
+            <span class="gear-name">Panel</span>
+            <span class="gear-value" id="panelW">—</span>
+            <span class="gear-sub" id="panelSub">circuits</span>
+          </figcaption>
+        </figure>
+        <figure class="gear-unit inverter" id="gearInverter">
+          <img src="/static/img/gear/inverter.png" alt="EcoFlow PowerOcean inverter" draggable="false" />
+          <figcaption>
+            <span class="gear-name">Inverter</span>
+            <span class="gear-value" id="invW">—</span>
+            <span class="gear-sub" id="invMode">—</span>
+          </figcaption>
+        </figure>
+        <figure class="gear-unit battery" data-pack="0">
+          <div class="batt-visual">
+            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 1" draggable="false" />
+            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
+          </div>
+          <figcaption>
+            <span class="gear-name">Bat 1</span>
+            <span class="gear-value pack-soc">—</span>
+            <span class="gear-sub pack-w">—</span>
+          </figcaption>
+        </figure>
+        <figure class="gear-unit battery" data-pack="1">
+          <div class="batt-visual">
+            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 2" draggable="false" />
+            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
+          </div>
+          <figcaption>
+            <span class="gear-name">Bat 2</span>
+            <span class="gear-value pack-soc">—</span>
+            <span class="gear-sub pack-w">—</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="gear-cluster gear-east" aria-label="Batteries east of windows">
+        <figure class="gear-unit battery" data-pack="2">
+          <div class="batt-visual">
+            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 3" draggable="false" />
+            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
+          </div>
+          <figcaption>
+            <span class="gear-name">Bat 3</span>
+            <span class="gear-value pack-soc">—</span>
+            <span class="gear-sub pack-w">—</span>
+          </figcaption>
+        </figure>
+        <figure class="gear-unit battery" data-pack="3">
+          <div class="batt-visual">
+            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 4" draggable="false" />
+            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
+          </div>
+          <figcaption>
+            <span class="gear-name">Bat 4</span>
+            <span class="gear-value pack-soc">—</span>
+            <span class="gear-sub pack-w">—</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <p class="house-meta" id="houseMeta">Waiting for telemetry…</p>
+    </div>
+  </main>
+</body>
+</html>

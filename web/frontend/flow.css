@@ -1,0 +1,309 @@
+/* Sunsynk-style animated power-flow card */
+
+.flow-page .flow-main {
+  display: grid;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.flow-stage-card { padding-bottom: 1.1rem; }
+
+.flow-stage {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(800px 420px at 50% 8%, rgba(240, 180, 41, 0.1), transparent 55%),
+    radial-gradient(520px 320px at 12% 55%, rgba(62, 207, 142, 0.08), transparent 52%),
+    radial-gradient(520px 320px at 88% 55%, rgba(91, 159, 212, 0.1), transparent 52%),
+    radial-gradient(420px 280px at 50% 92%, rgba(224, 122, 95, 0.07), transparent 50%),
+    #0c1218;
+  border: 1px solid var(--line);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+.flow-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(82vh, 900px);
+}
+/* Embedded on the main dashboard — keep it tall but not full-viewport. */
+body:not(.flow-page) .flow-svg {
+  max-height: min(68vh, 760px);
+}
+
+/* Rails (always visible faint tracks) */
+.flow-rails path {
+  stroke: rgba(80, 100, 120, 0.35);
+  stroke-width: 3;
+}
+
+/* Connector "ports" — a small grey socket where each line meets a node box,
+   giving the connection point a physical, wired-in look (like a jack/grommet
+   set into the box) regardless of whether that line is currently active. */
+.flow-port {
+  fill: #4a5a6b;
+  stroke: rgba(12, 18, 24, 0.85);
+  stroke-width: 1.5;
+}
+
+/* Active strokes: a continuous solid line (no dashes/dots) whose color is a
+   repeating white-to-accent-to-white gradient. flow-core.js moves that
+   gradient along the line every frame via `gradientTransform`, so the
+   colored band appears to flow through the line in the direction of power
+   flow — faster as wattage increases. See the <linearGradient> defs in the
+   page markup for the actual gradient/period definitions. */
+.flow-stroke {
+  stroke: transparent;
+  stroke-width: 3;
+  opacity: 0;
+  transition: opacity 0.35s ease, stroke-width 0.35s ease;
+}
+.flow-stroke.on {
+  opacity: 1;
+  filter: url(#glow);
+}
+/* Solar → Inverter: white base line, yellow band flowing toward the inverter. */
+.flow-stroke.solar.on { stroke: url(#gradSolarInv); }
+/* Battery leg default (covers idle/edge states); charging and discharging
+   below override this with the direction-specific treatment. */
+.flow-stroke.battery.on { stroke: url(#gradBatDischarge); }
+/* Discharging: battery pushes power back into the system toward the panel — green. */
+.flow-stroke.battery.on.discharge { stroke: url(#gradBatDischarge); }
+/* Charging, powered by solar: same yellow-to-white flow as the solar leg,
+   oriented inverter → battery since that's the direction power moves here. */
+.flow-stroke.battery.on.reverse { stroke: url(#gradBatCharge); }
+/* Inverter → Panel, solar-fed: same yellow leg continuing unbroken from the
+   Solar → Inverter line above, all the way through to the Grid export. */
+.flow-stroke.panel.on { stroke: url(#gradInvPanelSolar); }
+/* Inverter → Panel while the battery is discharging: keep it green all the
+   way through so the battery-sourced power reads as one continuous flow. */
+.flow-stroke.panel-battery.on { stroke: url(#gradInvPanelBattery); }
+/* Export sourced purely from a discharging battery (no solar) — green. */
+.flow-stroke.grid.on.export { stroke: url(#gradGridExport); }
+/* Export sourced purely from solar — yellow, continuing the same leg. */
+.flow-stroke.grid.on.export-solar { stroke: url(#gradGridExportSolar); }
+/* Export currently sourced from both solar and battery discharge at once —
+   show both colors traveling together instead of just one. */
+.flow-stroke.grid.on.export-mixed { stroke: url(#gradGridExportMixed); }
+.flow-stroke.grid.on.import { stroke: url(#gradGridImport); }
+.flow-stroke.home.on { stroke: url(#gradPanelHouse); }
+.flow-stroke.ev.on { stroke: url(#gradPanelEv); }
+
+.node-box {
+  fill: rgba(22, 30, 40, 0.92);
+  stroke: rgba(70, 90, 110, 0.7);
+  stroke-width: 2;
+  transition: fill 0.35s ease, stroke 0.35s ease, filter 0.35s ease;
+}
+.hub-box {
+  fill: rgba(28, 40, 54, 0.95);
+  stroke: rgba(140, 160, 180, 0.35);
+}
+
+.node-label {
+  fill: #8fa3b8;
+  font-size: 12px;
+  text-anchor: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-family: var(--font);
+  font-weight: 650;
+}
+.node-value {
+  fill: #e8eef5;
+  font-size: 30px;
+  font-weight: 700;
+  text-anchor: middle;
+  font-family: var(--font);
+}
+.node-value.small { font-size: 17px; font-weight: 650; }
+.node-sub {
+  fill: #8fa3b8;
+  font-size: 12px;
+  text-anchor: middle;
+  font-family: var(--font);
+}
+body.hide-daily .daily { display: none; }
+
+.node-icon-ring {
+  fill: rgba(240, 180, 41, 0.12);
+  stroke: rgba(240, 180, 41, 0.55);
+  stroke-width: 1.5;
+}
+.node-icon {
+  fill: #f0b429;
+  font-size: 20px;
+  text-anchor: middle;
+  font-family: var(--font);
+}
+
+.node-g.solar.active .node-box {
+  fill: rgba(240, 180, 41, 0.16);
+  stroke: rgba(255, 196, 48, 0.9);
+  filter: url(#glowBox);
+}
+.node-g.battery.charging .node-box {
+  fill: rgba(62, 207, 142, 0.14);
+  stroke: rgba(62, 207, 142, 0.95);
+  filter: url(#glowBox);
+}
+.node-g.battery.discharging .node-box {
+  fill: rgba(62, 207, 142, 0.14);
+  stroke: rgba(62, 207, 142, 0.95);
+  filter: url(#glowBox);
+}
+.node-g.grid.exporting .node-box {
+  fill: rgba(62, 207, 142, 0.14);
+  stroke: rgba(62, 207, 142, 0.95);
+  filter: url(#glowBox);
+}
+/* Export is currently solar-sourced — tint the Grid node yellow to match the
+   yellow leg running through Solar/Inverter/Panel instead of green. */
+.node-g.grid.exporting.solar-sourced .node-box {
+  fill: rgba(240, 180, 41, 0.16);
+  stroke: rgba(255, 196, 48, 0.9);
+  filter: url(#glowBox);
+}
+.node-g.grid.importing .node-box {
+  fill: rgba(91, 159, 212, 0.16);
+  stroke: rgba(91, 159, 212, 0.95);
+  filter: url(#glowBox);
+}
+.node-g.home.active .node-box {
+  fill: rgba(224, 122, 95, 0.14);
+  stroke: rgba(224, 122, 95, 0.95);
+  filter: url(#glowBox);
+}
+.node-g.ev.active .node-box {
+  fill: rgba(155, 126, 222, 0.16);
+  stroke: rgba(155, 126, 222, 0.95);
+  filter: url(#glowBox);
+}
+.node-g.panel.active .node-box {
+  fill: rgba(111, 177, 255, 0.14);
+  stroke: rgba(111, 177, 255, 0.9);
+  filter: url(#glowBox);
+}
+.node-g.inverter.online .hub-box {
+  stroke: rgba(232, 238, 245, 0.45);
+}
+.node-g.panel .node-label,
+.node-g.panel .node-value,
+.node-g.panel .node-sub {
+  text-anchor: start;
+}
+.node-photo {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+}
+
+.soc-track {
+  fill: rgba(255, 255, 255, 0.08);
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+}
+.soc-fill {
+  fill: url(#socGrad);
+  transition: width 0.6s ease;
+}
+
+/* Wattage labels on the lines themselves are hidden — the node boxes at
+   each end already show the live watt values, and the on-line labels
+   cluttered the lines/crossings. */
+.flow-labels {
+  display: none;
+}
+.flow-label {
+  fill: #c9d6e4;
+  font-size: 11px;
+  font-weight: 650;
+  font-family: var(--font);
+  paint-order: stroke;
+  stroke: rgba(12, 18, 24, 0.85);
+  stroke-width: 3px;
+  opacity: 0.35;
+  transition: opacity 0.3s ease;
+}
+.flow-label.on { opacity: 1; }
+
+/* Styled like an actual solar-panel tile: a rectangular frame with a couple
+   of cell-divider lines, plus a grey junction-box "port" nub at the bottom
+   (drawn with the shared .flow-port look so it reads the same as every
+   other connector on the page) instead of a plain rounded pill. */
+.pv-chip .pv-frame {
+  fill: rgba(22, 30, 40, 0.9);
+  stroke: rgba(240, 180, 41, 0.28);
+  stroke-width: 1.5;
+}
+.pv-chip.on .pv-frame {
+  fill: rgba(240, 180, 41, 0.16);
+  stroke: rgba(240, 180, 41, 0.85);
+  filter: url(#glowBox);
+}
+.pv-chip .pv-cell-line {
+  stroke: rgba(240, 180, 41, 0.22);
+  stroke-width: 1;
+}
+.pv-chip.on .pv-cell-line {
+  stroke: rgba(240, 180, 41, 0.5);
+}
+.pv-chip text {
+  fill: #e8eef5;
+  font-size: 11px;
+  text-anchor: middle;
+  font-family: var(--font);
+}
+.pv-chip .pv-label {
+  fill: #8fa3b8;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.pv-chip .pv-value {
+  font-weight: 600;
+}
+
+.pack-chip rect {
+  fill: rgba(22, 30, 40, 0.88);
+  stroke: rgba(62, 207, 142, 0.35);
+  stroke-width: 1.2;
+}
+.pack-chip text {
+  fill: #c9d6e4;
+  font-size: 10px;
+  text-anchor: middle;
+  font-family: var(--font);
+}
+
+.flow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-top: 0.85rem;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.flow-legend .dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+.flow-legend .dot.solar { background: #f0b429; }
+.flow-legend .dot.battery { background: linear-gradient(135deg, #f7c948, #ffffff); }
+.flow-legend .dot.bat-dsg { background: #3ecf8e; }
+.flow-legend .dot.grid-in { background: #5b9fd4; }
+.flow-legend .dot.grid-out { background: #3ecf8e; }
+.flow-legend .dot.home { background: #e07a5f; }
+.flow-legend .dot.ev { background: #9b7ede; }
+.flow-legend .dot.panel { background: #6fb1ff; }
+
+@media (max-width: 720px) {
+  .flow-svg { max-height: none; }
+  .node-value { font-size: 24px; }
+}

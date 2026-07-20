@@ -12,6 +12,8 @@ license = { text = "MIT" }
 authors = [{ name = "andre" }]
 dependencies = [
     "aiohttp>=3.9",
+    "paho-mqtt>=2.0",
+    "protobuf>=5.0",
 ]
 
 [project.optional-dependencies]

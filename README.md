@@ -14,7 +14,7 @@ This is a **standalone project** — separate from [hbx-sensorlinx-ha](https://g
 | Mobile app API mapping | Done (REST via provider-service) |
 | `pyecoflowocean` client | Implemented — login, region detect, telemetry parser |
 | HA integration | Ready for live testing |
-| MQTT real-time | Planned (cert fetch implemented, subscriber not yet) |
+| MQTT real-time | Partial — connect + subscribe works; CDO Ocean Pro uses Gen3 protobuf (`cmdFunc=254`), decoder WIP |
 | Configuration writes | Read-only v1; MQTT set path documented |
 
 ## Project layout
@@ -27,14 +27,16 @@ ecoflow-ocean-ha/
     analyze_har.py             # Summarize captured app traffic
     discover_devices.py        # Login + dump telemetry keys
     ha_probe.py                # Check Forest Home HA state
+    inverter_raw_capture.py    # Wide raw+mapped MQTT capture for field mapping
   docs/
     capture-traffic.md         # App-only capture guide
     api-notes.md               # Fill after capture
+    inverter-field-mapping.md  # Raw field -> sensor mapping (build alongside captures)
   dashboards/
     ecoflow-ocean.yaml         # Lovelace template
   automations/
     examples.yaml              # SOC / export / offline alerts
-  captures/                    # gitignored HAR files
+  captures/                    # gitignored HAR files + inverter_raw_capture.py output
 ```
 
 ## Phase 1 — Capture the EcoFlow app (blocking)

@@ -5,6 +5,13 @@ __pycache__/
 .env
 *.har
 captures/
+web/.env
+web/.env.*
+!web/.env.example
+web/_tmp_*.sh
+web/data/
+web/.venv/
+web/ecoflow-ocean-web.tar.gz
 .DS_Store
 .idea/
 .vscode/

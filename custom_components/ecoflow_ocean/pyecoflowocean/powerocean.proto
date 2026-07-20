@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+message pcsPhase {
+  optional float vol = 1;
+  optional float amp = 2;
+  optional float actPwr = 3;
+  optional float pwr = 4;
+}
+
+message JTS1_ENERGY_STREAM_REPORT {
+  optional float sysLoadPwr = 1;
+  optional float sysGridPwr = 2;
+  optional float mpptPwr = 3;
+  optional float bpPwr = 4;
+  optional int32 bpSoc = 5;
+}
+
+message JTS1_EMS_HEARTBEAT {
+  optional pcsPhase pcsAPhase = 12;
+  optional pcsPhase pcsBPhase = 13;
+  optional pcsPhase pcsCPhase = 14;
+  optional float emsBpPower = 59;
+}
+
+message JTS1_EMS_CHANGE_REPORT {
+  optional int32 bpSoc = 7;
+  optional uint32 sys_bat_chg_up_limit = 11;
+  optional uint32 sys_bat_dsg_down_limit = 12;
+  optional int32 emsFeedRatio = 17;
+  optional int32 emsFeedPwr = 18;
+}
+
+message ParallelEnergyStream {
+  optional float sys_load_pwr = 1;
+  optional float sys_grid_pwr = 2;
+  optional float mppt_pwr = 3;
+  optional float bp_pwr = 4;
+  optional uint32 bp_soc = 5;
+  optional string dev_sn = 6;
+}
+
+message ParallelEnergyStreamReport {
+  repeated ParallelEnergyStream para_energy_stream = 1;
+}
+
+message setHeader6 {
+  JTS1_ENERGY_STREAM_REPORT pdata = 1;
+  int32 src = 2;
+  int32 dest = 3;
+  int32 cmd_func = 8;
+  int32 cmd_id = 9;
+}
+
+message setHeader12 {
+  JTS1_EMS_CHANGE_REPORT pdata = 1;
+  int32 src = 2;
+  int32 dest = 3;
+  int32 cmd_func = 8;
+  int32 cmd_id = 9;
+}
+
+message setHeader15 {
+  JTS1_EMS_HEARTBEAT pdata = 1;
+  int32 src = 2;
+  int32 dest = 3;
+  int32 cmd_func = 8;
+  int32 cmd_id = 9;
+}
+
+message setHeader1 {
+  ParallelEnergyStreamReport pdata = 1;
+  int32 src = 2;
+  int32 dest = 3;
+  int32 cmd_func = 8;
+  int32 cmd_id = 9;
+}
+
+message sentJTS1_ENERGY_STREAM_REPORT {
+  setHeader6 header = 1;
+}
+
+message sentJTS1_EMS_HEARTBEAT {
+  setHeader15 header = 1;
+}
+
+message sentJTS1_EMS_CHANGE_REPORT {
+  setHeader12 header = 1;
+}
+
+message sentParallelEnergyStreamReport {
+  setHeader1 header = 1;
+}

@@ -8,6 +8,14 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from env_loader import load_dotenv
+
+load_dotenv()
 
 BASE = os.environ.get("HA_URL", "http://172.16.255.250:8123")
 TOKEN = os.environ.get("HA_TOKEN", "")
@@ -37,6 +45,7 @@ def get(path: str) -> tuple[int, object]:
 def main() -> int:
     if not TOKEN:
         print("Set HA_TOKEN (long-lived access token from HA profile).", file=sys.stderr)
+        print("Tip: run python scripts/setup_env.py", file=sys.stderr)
         return 1
 
     checks = [

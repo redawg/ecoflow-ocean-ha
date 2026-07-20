@@ -1,0 +1,28 @@
+# EcoFlow Ocean web — Podman systemd (RHEL / infra3)
+# Install:
+#   sudo cp web/ecoflow-ocean-web.container /etc/containers/systemd/
+#   sudo mkdir -p /etc/ecoflow-ocean-web
+#   sudo cp web/.env /etc/ecoflow-ocean-web/env   # fill credentials
+#   sudo systemctl daemon-reload
+#   sudo systemctl start ecoflow-ocean-web
+#
+# Image must already exist on the host:
+#   podman build -f web/Containerfile -t ecoflow-ocean-web:latest .
+
+[Unit]
+Description=EcoFlow Ocean LAN web dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/ecoflow-ocean-web:latest
+PublishPort=8080:8080
+Volume=ecoflow-ocean-data.volume:/data:Z
+EnvironmentFile=/etc/ecoflow-ocean-web/env
+AutoUpdate=local
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

@@ -22,7 +22,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "custom_components" / "ecoflow_ocean"))
+
+from env_loader import load_dotenv
+
+load_dotenv()
 
 from pyecoflowocean import EcoflowOcean
 from pyecoflowocean.const import PRODUCT_TYPE_NAMES, PRODUCT_TYPE_POWER_OCEAN
@@ -41,6 +46,7 @@ async def main() -> int:
             "Set ECOFLOW_EMAIL and ECOFLOW_PASSWORD.",
             file=sys.stderr,
         )
+        print("Tip: run python scripts/setup_env.py", file=sys.stderr)
         return 1
 
     api = EcoflowOcean(
