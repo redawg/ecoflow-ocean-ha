@@ -41,8 +41,15 @@ ONLINE_DEFINITION = BinarySensorDefinition(
 PANEL_DEFINITIONS: tuple[BinarySensorDefinition, ...] = (
     ONLINE_DEFINITION,
     BinarySensorDefinition(
+        key="storm_watch",
+        name="Storm Watch",
+        value_fn=lambda state: getattr(state, "storm_watch", None)
+        if isinstance(state, EcoflowPanelState)
+        else None,
+    ),
+    BinarySensorDefinition(
         key="storm_enabled",
-        name="Storm mode enabled",
+        name="Storm mode active",
         value_fn=lambda state: getattr(state, "storm_enabled", None)
         if isinstance(state, EcoflowPanelState)
         else None,

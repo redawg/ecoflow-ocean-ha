@@ -137,6 +137,81 @@ def test_battery_pack_multi_header() -> None:
     assert "HR52ZA1AVHB50223" in flat["bp_pack_sns"]
 
 
+def test_battery_pack_shared_bus_current_averaged() -> None:
+    # Ground-truthed live 2026-07-19: 4 packs each reporting ~-86 A (tight
+    # spread) summed to a ~13.8 kW draw against a ~3.2 kW balance-derived
+    # true draw. Reproduce that signature with 4 packs at nearly-identical
+    # current and assert the combined bpPwr is now the mean, not the sum.
+    def _pack(sn: str, current_deciamps: float, voltage_mv: float) -> bytes:
+        return b"".join(
+            [
+                _float_field(1, 1.0),
+                _string_field(3, sn),
+                _float_field(10, 83.0),
+                _float_field(11, 83.0),
+                _float_field(20, 99.5),
+                _float_field(22, 22.0),
+                _float_field(43, current_deciamps),
+                _float_field(45, voltage_mv),
+            ]
+        )
+
+    packs_raw = [
+        _pack("HR52ZA1AVHAT0643", -852.0, 39749.0),
+        _pack("HR52ZA1AVHB50213", -881.0, 39755.0),
+        _pack("HR52ZA1AVH720017", -880.0, 39756.0),
+        _pack("HR52ZA1AVHB50223", -864.0, 39756.0),
+    ]
+    payload = b"".join(
+        _bytes_field(1, _header(p, cmd_func=32, cmd_id=177)) for p in packs_raw
+    )
+    flat = parse_ocean_inverter_payload(payload)
+    assert flat is not None
+    assert flat["bp_pack_count"] == 4
+    individual_sum = sum(p["power_w"] for p in flat["bp_packs"])
+    # Each pack alone reports ~3.4-3.5 kW; a naive sum would land near 13.8 kW.
+    assert individual_sum == pytest.approx(13822.7, rel=1e-3)
+    # The combined reading should be the mean (one pack's share), not the sum.
+    assert flat["bpPwr"] == pytest.approx(individual_sum / 4, rel=1e-3)
+    assert abs(flat["bpPwr"]) < 4000.0
+
+
+def test_battery_pack_shared_bus_current_wide_spread_still_averaged() -> None:
+    # Second live ground-truth snapshot, 2026-07-19: 4 packs discharging at
+    # -25.5 to -46.4 A (spread ~45%, not tightly clustered) summed to a
+    # 5.2 kW draw against a ~1.1-1.2 kW balance-derived true draw (~4.5x
+    # overcount). Same direction + non-trivial magnitude is what should
+    # matter here, not a tight numeric spread.
+    def _pack(sn: str, current_deciamps: float, voltage_mv: float) -> bytes:
+        return b"".join(
+            [
+                _float_field(1, 1.0),
+                _string_field(3, sn),
+                _float_field(10, 83.0),
+                _float_field(11, 83.0),
+                _float_field(20, 99.5),
+                _float_field(22, 22.0),
+                _float_field(43, current_deciamps),
+                _float_field(45, voltage_mv),
+            ]
+        )
+
+    packs_raw = [
+        _pack("HR52ZA1AVHAT0643", -275.3, 39749.0),
+        _pack("HR52ZA1AVHB50213", -314.6, 39755.0),
+        _pack("HR52ZA1AVH720017", -254.7, 39756.0),
+        _pack("HR52ZA1AVHB50223", -464.0, 39756.0),
+    ]
+    payload = b"".join(
+        _bytes_field(1, _header(p, cmd_func=32, cmd_id=177)) for p in packs_raw
+    )
+    flat = parse_ocean_inverter_payload(payload)
+    assert flat is not None
+    individual_sum = sum(p["power_w"] for p in flat["bp_packs"])
+    assert individual_sum == pytest.approx(5202.2, rel=1e-3)
+    assert flat["bpPwr"] == pytest.approx(individual_sum / 4, rel=1e-3)
+
+
 def test_home_balance_when_battery_full() -> None:
     pdata = b"".join(
         [

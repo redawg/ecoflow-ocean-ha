@@ -31,7 +31,12 @@ INVERTER_FEED_LABELS: dict[int, str] = {
 # System settings observed on Ocean Panel 40 MQTT (HR61…).
 BACKUP_RESERVE_SOC_FIELD = 1215
 SOLAR_BACKUP_RESERVE_SOC_FIELD = 270
-STORM_ENABLED_FIELD = 282
+# Field 282 is present in settings dumps but does NOT track the app Storm
+# Guard toggle (stayed at 2 through on/off cycles). Field 467 flipped 0↔1
+# in lockstep with five Storm Guard toggles on 2026-07-20.
+STORM_MODE_FIELD = 282  # raw / unknown semantics — keep for diagnostics
+STORM_WATCH_FIELD = 467  # Storm Guard armed (0=off, 1=on)
+STORM_ENABLED_FIELD = STORM_MODE_FIELD  # legacy alias used by capture scripts
 LINKED_DEVICE_BLOCK = (1, 1)
 CIRCUIT_CONFIG_FIELD_START = 794
 CIRCUIT_CONFIG_FIELD_END = 947
@@ -108,9 +113,22 @@ def parse_ocean_panel_payload(payload: bytes) -> dict[str, Any] | None:
     if solar_backup_soc is not None and 0 <= solar_backup_soc <= 100:
         flat["solar_backup_reserve_soc"] = solar_backup_soc
 
-    storm_enabled = _find_float_in_tree(tree, STORM_ENABLED_FIELD)
-    if storm_enabled is not None and storm_enabled in (0, 1):
-        flat["storm_enabled"] = storm_enabled >= 0.5
+    storm_raw = _find_float_in_tree(tree, STORM_MODE_FIELD)
+    if storm_raw is not None and storm_raw >= 0:
+        flat["storm_mode"] = int(storm_raw)
+
+    # App Storm Guard toggle — confirmed via 5× on/off MQTT capture.
+    storm_watch = _find_float_in_tree(tree, STORM_WATCH_FIELD)
+    if storm_watch is not None and storm_watch >= 0:
+        flat["storm_watch"] = storm_watch >= 0.5
+
+    # Active storm-event / charge-for-storm — not yet confirmed on this panel.
+    # Older dumps used storm_mode==1 while Watch was discussed; keep as a
+    # weak signal only when Watch is also on.
+    if flat.get("storm_watch") and flat.get("storm_mode") == 1:
+        flat["storm_enabled"] = True
+    elif "storm_watch" in flat and not flat["storm_watch"]:
+        flat["storm_enabled"] = False
 
     linked = _find_nested_block(tree, LINKED_DEVICE_BLOCK)
     if isinstance(linked, dict):
@@ -253,6 +271,10 @@ def _find_float_in_tree(node: dict[int, Any], field_num: int, depth: int = 0) ->
     if depth > 8:
         return None
     val = node.get(field_num)
+    if isinstance(val, list) and val:
+        val = val[-1]
+    if isinstance(val, bool):
+        return 1.0 if val else 0.0
     if isinstance(val, (int, float)):
         return float(val)
     for value in node.values():
@@ -260,6 +282,12 @@ def _find_float_in_tree(node: dict[int, Any], field_num: int, depth: int = 0) ->
             found = _find_float_in_tree(value, field_num, depth + 1)
             if found is not None:
                 return found
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    found = _find_float_in_tree(item, field_num, depth + 1)
+                    if found is not None:
+                        return found
     return None
 
 
@@ -366,6 +394,8 @@ def parse_panel_flat_telemetry(serial_number: str, flat: dict[str, Any]):
         panel_self_consumption_w=panel_self_consumption,
         backup_reserve_soc=_maybe_float(flat.get("backup_reserve_soc")),
         solar_backup_reserve_soc=_maybe_float(flat.get("solar_backup_reserve_soc")),
+        storm_mode=_maybe_int(flat.get("storm_mode")),
+        storm_watch=_maybe_bool(flat.get("storm_watch")),
         storm_enabled=_maybe_bool(flat.get("storm_enabled")),
         linked_ev_charger_serial=flat.get("linked_ev_charger_serial"),
         ev_charge_power_w=ev_power,
@@ -437,6 +467,15 @@ def _maybe_bool(value: Any) -> bool | None:
     if value is None:
         return None
     return bool(value)
+
+
+def _maybe_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _maybe_float(value: Any) -> float | None:

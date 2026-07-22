@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EcoFlow locked gear standards</title>
+  <style>
+    :root { --bg:#121418; --card:#1c1f26; --text:#e8eaed; --muted:#9aa0a6; --line:#2a2f3a; --ok:#81c995; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    header { padding:28px 32px 16px; border-bottom:1px solid var(--line); }
+    header h1 { margin:0 0 8px; font-size:1.35rem; }
+    header p { margin:0; color:var(--muted); max-width:75ch; }
+    main { padding:24px 32px 64px; display:grid; gap:28px; }
+    h2 { margin:0 0 12px; font-size:1.05rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+    .img {
+      min-height:280px; display:flex; align-items:center; justify-content:center; padding:16px;
+      background:
+        linear-gradient(45deg,#2a2f3a 25%,transparent 25%) -12px 0/24px 24px,
+        linear-gradient(-45deg,#2a2f3a 25%,transparent 25%) -12px 0/24px 24px,
+        linear-gradient(45deg,transparent 75%,#2a2f3a 75%) -12px 0/24px 24px,
+        linear-gradient(-45deg,transparent 75%,#2a2f3a 75%) -12px 0/24px 24px,
+        #181b21;
+    }
+    .img img { max-width:100%; max-height:360px; object-fit:contain; }
+    .wide .img { min-height:200px; }
+    .wide img { width:100%; max-height:400px; }
+    figcaption { padding:12px 14px; border-top:1px solid var(--line); font-size:.9rem; }
+    code { color:var(--muted); font-size:.8rem; display:block; margin-top:4px; }
+    .ok { color:var(--ok); font-weight:600; }
+    .dims { display:block; color:var(--muted); font-size:.78rem; margin-top:4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Locked EcoFlow gear standards</h1>
+    <p>
+      Canonical cutouts live in <code style="display:inline">img/gear/standard/</code>.
+      Do not restyle — resize with LANCZOS only. House plates (Desert + Forest) use these looks.
+    </p>
+  </header>
+  <main>
+    <section>
+      <h2>Locked standards</h2>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="../standard/panel.png" alt="Panel" /></div>
+          <figcaption><span class="ok">Panel</span><code>standard/panel.png</code><span class="dims">from Desert locked plate</span></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="../standard/inverter.png" alt="Inverter" /></div>
+          <figcaption><span class="ok">Inverter</span><code>standard/inverter.png</code><span class="dims">cleaner product shot · silver door + display base</span></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="../standard/battery.png" alt="Battery" /></div>
+          <figcaption><span class="ok">Battery</span><code>standard/battery.png</code><span class="dims">user-approved Desert packs</span></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="../standard/ev.png" alt="EV" /></div>
+          <figcaption><span class="ok">EV charger</span><code>standard/ev.png</code><span class="dims">official Ocean EV cutout</span></figcaption>
+        </figure>
+      </div>
+    </section>
+    <section>
+      <h2>Wall row preview</h2>
+      <div class="grid">
+        <figure class="card wide">
+          <div class="img"><img src="wall-row-preview.png" alt="Wall row" /></div>
+          <figcaption>Panel → Inverter → Batteries → EV<code>wall-row-preview.png</code></figcaption>
+        </figure>
+      </div>
+    </section>
+    <section>
+      <h2>Dashboard fronts (HD)</h2>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="smart-panel-closed.png" alt="Panel HD" /></div>
+          <figcaption>Panel HD<code>smart-panel-closed.png</code></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="inverter-front-hd.png" alt="Inverter HD" /></div>
+          <figcaption>Inverter HD flat<code>inverter-front-hd.png</code></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="battery-standard.png" alt="Battery" /></div>
+          <figcaption>Battery standard<code>battery-standard.png</code></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="ev-charger-official-hd.png" alt="EV" /></div>
+          <figcaption>EV official<code>ev-charger-official-hd.png</code></figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

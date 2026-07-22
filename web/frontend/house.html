@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EcoFlow Ocean · House</title>
   <link rel="stylesheet" href="/static/styles.css?v=20260720c" />
-  <link rel="stylesheet" href="/static/house.css?v=20260720c" />
-  <script src="/static/house.js?v=20260720c" defer></script>
+  <link rel="stylesheet" href="/static/house.css?v=20260722s" />
+  <script src="/static/house.js?v=20260722s" defer></script>
 </head>
 <body class="house-page">
   <header class="top house-top">
@@ -29,10 +29,16 @@
       <img
         class="house-bg"
         id="houseBg"
-        src="/static/img/house-aerial-left-v3.png?v=20260720c"
-        alt="Aerial view of desert house with solar array, pitched parapet roof, driveway, garage and rear fencing, left wall visible"
+        src="/static/img/house-desert-wide-v1.png?v=20260722s"
+        alt="Full desert house with garage and roof solar"
         draggable="false"
       />
+      <div class="day-overlay" id="dayOverlay"></div>
+
+      <!-- Click to zoom into left-wall equipment; click again to zoom out -->
+      <button class="gear-zoom-btn" id="gearZoomBtn" type="button" aria-label="Zoom into equipment">
+        <span class="zoom-hint" id="zoomHint">🔍 Click to inspect</span>
+      </button>
 
       <!-- Interactive PV modules over the roof arrays (colors follow live string power) -->
       <svg class="pv-overlay" id="pvOverlay" viewBox="0 0 1000 625" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -48,9 +54,71 @@
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          <linearGradient id="gradEvFlow" gradientUnits="userSpaceOnUse"
+            x1="695" y1="382" x2="215" y2="361">
+            <stop offset="0%"   stop-color="#c4a8ff" stop-opacity="1" />
+            <stop offset="45%"  stop-color="#9b7ede" stop-opacity="0.85" />
+            <stop offset="100%" stop-color="#7dffb2" stop-opacity="0.9" />
+          </linearGradient>
+          <linearGradient id="gradSolarGear" gradientUnits="userSpaceOnUse"
+            x1="520" y1="180" x2="240" y2="420">
+            <stop offset="0%" stop-color="#ffe566" stop-opacity="0.95" />
+            <stop offset="55%" stop-color="#7dffb2" stop-opacity="0.9" />
+            <stop offset="100%" stop-color="#5ee0a0" stop-opacity="0.85" />
+          </linearGradient>
+          <linearGradient id="gradBatGlow" gradientUnits="userSpaceOnUse"
+            x1="240" y1="400" x2="240" y2="520">
+            <stop offset="0%" stop-color="#7dffb2" stop-opacity="0.95" />
+            <stop offset="100%" stop-color="#3ecf8e" stop-opacity="0.7" />
+          </linearGradient>
         </defs>
         <g id="pvArrayMain" class="pv-array"></g>
-        <g id="pvArraySec" class="pv-array"></g>
+
+        <!-- Site power lines: roof solar → left-wall gear (EcoFlow app style).
+             Paths swap with data-site on the stage; animated when solar/battery live. -->
+        <g id="powerLines" class="power-lines" aria-hidden="true">
+          <g class="power-line-set desert">
+            <path class="power-rail"
+              d="M520 175 L480 200 L220 280 L175 340 L160 400 L160 480" />
+            <path id="powerSolarDesert" class="power-stroke solar"
+              d="M520 175 L480 200 L220 280 L175 340 L160 400 L160 480" />
+            <path class="power-rail short"
+              d="M160 420 L210 420 L245 455" />
+            <path id="powerBatDesert" class="power-stroke battery"
+              d="M160 420 L210 420 L245 455" />
+          </g>
+          <g class="power-line-set forest">
+            <path class="power-rail"
+              d="M420 155 L360 200 L200 300 L145 370 L125 440 L125 510" />
+            <path id="powerSolarForest" class="power-stroke solar"
+              d="M420 155 L360 200 L200 300 L145 370 L125 440 L125 510" />
+            <path class="power-rail short"
+              d="M125 455 L175 455 L210 490" />
+            <path id="powerBatForest" class="power-stroke battery"
+              d="M125 455 L175 455 L210 490" />
+          </g>
+        </g>
+
+        <!-- EV charger → panel power flow conduit: up garage wall → along
+             garage roof → up to main roof parapet → along front parapet
+             following the house lines → down left wall to gear cluster -->
+        <g id="evFlowGroup" class="ev-flow-group">
+          <path id="evFlowRail"
+            d="M695,382 L713,335 L713,296 Q710,260 697,254
+               L501,265 L345,267 L186,283
+               Q180,290 182,310 L215,361"
+            fill="none" stroke="rgba(155,126,222,0.10)" stroke-width="4.5"
+            stroke-linecap="round" stroke-linejoin="round" />
+          <path id="evFlowStroke"
+            d="M695,382 L713,335 L713,296 Q710,260 697,254
+               L501,265 L345,267 L186,283
+               Q180,290 182,310 L215,361"
+            fill="none" stroke="url(#gradEvFlow)" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round"
+            stroke-dasharray="14 24" style="stroke-opacity:0;" />
+          <text id="evFlowLabel" class="ev-flow-label"
+            x="440" y="256" text-anchor="middle"></text>
+        </g>
       </svg>
 
       <article class="h-card grid" id="cardGrid" style="left: 2%; top: 5%;">
@@ -67,7 +135,7 @@
         </dl>
       </article>
 
-      <article class="h-card solar" id="cardSolar" style="left: 38%; top: 4%;">
+      <article class="h-card solar" id="cardSolar" style="left: 50%; top: 2%; transform: translateX(-50%);">
         <header>
           <span class="h-label">Solar</span>
         </header>
@@ -78,86 +146,110 @@
       <article class="h-card home" id="cardHome" style="right: 2%; top: 5%; left: auto;">
         <header>
           <span class="h-label">House load</span>
+          <span class="h-badge storm" id="stormBadge" hidden>Storm Guard</span>
         </header>
         <p class="h-value" id="homeW">—</p>
         <p class="h-sub" id="homeHint">essential (ex-EV)</p>
       </article>
 
-      <article class="h-card ev" id="cardEv" style="right: 2%; bottom: 6%; top: auto; left: auto;">
+      <article class="h-card ev" id="cardEv" style="right: 2%; bottom: 5%; top: auto; left: auto;">
         <header>
-          <span class="h-label">EV</span>
+          <span class="h-label" id="evLabel">EV</span>
           <span class="h-badge" id="evBadge">—</span>
         </header>
         <p class="h-value" id="evW">—</p>
         <p class="h-sub" id="evSub">charger</p>
       </article>
 
-      <!-- Elevation: Panel + Inverter + Bat1/2 west of windows; Bat3/4 east -->
-      <section class="gear-cluster gear-west" aria-label="Panel, inverter, batteries west of windows">
-        <figure class="gear-unit panel" id="gearPanel">
-          <img src="/static/img/gear/panel.png" alt="EcoFlow Smart Panel" draggable="false" />
-          <figcaption>
-            <span class="gear-name">Panel</span>
-            <span class="gear-value" id="panelW">—</span>
-            <span class="gear-sub" id="panelSub">circuits</span>
-          </figcaption>
-        </figure>
-        <figure class="gear-unit inverter" id="gearInverter">
-          <img src="/static/img/gear/inverter.png" alt="EcoFlow PowerOcean inverter" draggable="false" />
-          <figcaption>
-            <span class="gear-name">Inverter</span>
-            <span class="gear-value" id="invW">—</span>
-            <span class="gear-sub" id="invMode">—</span>
-          </figcaption>
-        </figure>
-        <figure class="gear-unit battery" data-pack="0">
-          <div class="batt-visual">
-            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 1" draggable="false" />
-            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
-          </div>
-          <figcaption>
-            <span class="gear-name">Bat 1</span>
-            <span class="gear-value pack-soc">—</span>
-            <span class="gear-sub pack-w">—</span>
-          </figcaption>
-        </figure>
-        <figure class="gear-unit battery" data-pack="1">
-          <div class="batt-visual">
-            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 2" draggable="false" />
-            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
-          </div>
-          <figcaption>
-            <span class="gear-name">Bat 2</span>
-            <span class="gear-value pack-soc">—</span>
-            <span class="gear-sub pack-w">—</span>
-          </figcaption>
-        </figure>
+      <article class="h-card ev" id="cardEv2" hidden style="right: 2%; bottom: 14%; top: auto; left: auto;">
+        <header>
+          <span class="h-label">EV 2</span>
+          <span class="h-badge" id="ev2Badge">—</span>
+        </header>
+        <p class="h-value" id="ev2W">—</p>
+        <p class="h-sub" id="ev2Sub">bay 1 charger</p>
+      </article>
+
+      <!-- Real EcoFlow product cutouts on the left wall.
+           Sizes locked to physical mm (panel/inv/battery) via --gear-bat-h.
+           Battery towers are created from live pack telemetry (1–8). -->
+      <section class="gear-rack" id="gearRack" data-packs="0" aria-label="EcoFlow wall equipment">
+        <div class="gear-wall-stack">
+          <figure class="gear-unit panel" id="gearPanel">
+            <div class="gear-visual">
+              <img src="/static/img/gear/panel-tower.png?v=20260722s" alt="EcoFlow Smart Panel" draggable="false" />
+              <span class="gear-glow" aria-hidden="true"></span>
+            </div>
+            <figcaption>
+              <span class="gear-name">Panel</span>
+              <span class="gear-value" id="panelW">—</span>
+              <span class="gear-sub" id="panelSub">circuits</span>
+            </figcaption>
+          </figure>
+          <figure class="gear-unit inverter" id="gearInverter">
+            <div class="gear-visual">
+              <img src="/static/img/gear/inverter-tower.png?v=20260722s" alt="EcoFlow Ocean Pro inverter" draggable="false" />
+              <span class="gear-glow" aria-hidden="true"></span>
+              <!-- Live face over inverter black display bay: semi-circle SOC + bottom flow -->
+              <div class="inv-face" id="invFaceSoc" aria-label="Inverter system display">
+                <svg class="inv-face-arc" viewBox="0 0 100 56" aria-hidden="true">
+                  <path class="inv-face-arc-track"
+                    d="M 8 52 A 42 42 0 0 1 92 52" fill="none" />
+                  <path class="inv-face-arc-fill" id="invFaceRing"
+                    d="M 8 52 A 42 42 0 0 1 92 52" fill="none"
+                    pathLength="100" />
+                </svg>
+                <div class="inv-face-inner">
+                  <span class="inv-face-pct" id="invFacePct">—</span>
+                  <span class="inv-face-substatus" id="invFaceSub"></span>
+                  <span class="inv-face-watts" id="invFaceBatW">—</span>
+                  <span class="inv-face-watts-unit">W</span>
+                  <div class="inv-face-row">
+                    <i class="inv-ico bat" aria-hidden="true"></i>
+                    <i class="inv-ico home" aria-hidden="true"></i>
+                  </div>
+                  <div class="inv-face-flow" aria-hidden="true">
+                    <span class="inv-face-flow-rail"></span>
+                    <span class="inv-face-flow-dash" id="invFaceFlow"></span>
+                  </div>
+                </div>
+                <span class="inv-face-status" id="invFaceDir" hidden></span>
+                <span id="invFaceHomeW" hidden></span>
+              </div>
+            </div>
+            <figcaption>
+              <span class="gear-name">Inverter</span>
+              <span class="gear-value" id="invSoc">—</span>
+              <span class="gear-sub" id="invW">—</span>
+              <span class="gear-sub" id="invMode">—</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="gear-bat-row" id="gearBatRow"></div>
       </section>
 
-      <section class="gear-cluster gear-east" aria-label="Batteries east of windows">
-        <figure class="gear-unit battery" data-pack="2">
-          <div class="batt-visual">
-            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 3" draggable="false" />
-            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
-          </div>
-          <figcaption>
-            <span class="gear-name">Bat 3</span>
-            <span class="gear-value pack-soc">—</span>
-            <span class="gear-sub pack-w">—</span>
-          </figcaption>
-        </figure>
-        <figure class="gear-unit battery" data-pack="3">
-          <div class="batt-visual">
-            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="Battery pack 4" draggable="false" />
-            <div class="batt-track" aria-hidden="true"><div class="batt-fill"></div></div>
-          </div>
-          <figcaption>
-            <span class="gear-name">Bat 4</span>
-            <span class="gear-value pack-soc">—</span>
-            <span class="gear-sub pack-w">—</span>
-          </figcaption>
-        </figure>
-      </section>
+      <div class="vehicle-picker" id="vehiclePicker">
+        <label class="vp-bay" id="vpBay1Wrap" hidden>
+          <span class="vp-label">Single</span>
+          <select id="vehicleSelectBay1" aria-label="Single garage bay vehicle">
+            <option value="none">Empty</option>
+            <option value="tesla-model3">Tesla Model 3</option>
+            <option value="tesla-modely">Tesla Model Y</option>
+            <option value="rivian-r1s">Rivian R1S</option>
+            <option value="rivian-r1t">Rivian R1T</option>
+          </select>
+        </label>
+        <label class="vp-bay" id="vpBay2Wrap">
+          <span class="vp-label" id="vpBay2Label">Garage</span>
+          <select id="vehicleSelect" aria-label="Garage vehicle">
+            <option value="none">Empty</option>
+            <option value="tesla-model3">Tesla Model 3</option>
+            <option value="tesla-modely">Tesla Model Y</option>
+            <option value="rivian-r1s">Rivian R1S</option>
+            <option value="rivian-r1t">Rivian R1T</option>
+          </select>
+        </label>
+      </div>
 
       <p class="house-meta" id="houseMeta">Waiting for telemetry…</p>
     </div>

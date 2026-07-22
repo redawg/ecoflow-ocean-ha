@@ -408,9 +408,11 @@
         }
         const wText =
           Number.isFinite(watts) && Math.abs(watts) > 20 ? fmtW(Math.abs(watts)) : dir;
+        const volts = Number(p.voltage_v);
+        const vText = Number.isFinite(volts) ? `${volts.toFixed(1)} V` : null;
         return `<div class="pack-tile ${dir}">
           <div class="pack-visual">
-            <img src="/static/img/gear/battery-tower.png?v=20260718q" alt="" draggable="false" />
+            <img src="/static/img/gear/battery-tower.png?v=20260722e" alt="" draggable="false" />
             <div class="pack-batt-track" aria-hidden="true">
               <div class="pack-batt-fill" style="--pct:${pct.toFixed(1)}%"></div>
             </div>
@@ -418,7 +420,7 @@
           <div class="pack-info">
             <div class="clabel">Pack ${idx}${snShort ? ` · ${escapeHtml(snShort)}` : ""}</div>
             <div class="cval">${Number.isFinite(soc) ? `${soc.toFixed(1)}%` : "—"}</div>
-            <div class="csub">${escapeHtml(wText)}${
+            <div class="csub">${escapeHtml([wText, vText].filter(Boolean).join(" · "))}${
               p.soh != null ? ` · SOH ${Number(p.soh).toFixed(0)}%` : ""
             }</div>
           </div>
@@ -435,25 +437,35 @@
 
     const night = !!flow.overhead_night;
     const tiles = [
-      ["Solar", flow.solar_w, ""],
-      ["Battery", flow.battery_w, ""],
-      ["Grid", flow.grid_w != null ? Math.abs(flow.grid_w) : null, ""],
-      ["House", flow.home_w, ""],
-      ["Branch circuits", flow.branch_load_w, ""],
-      ["Inverter feed", flow.inverter_feed_w != null ? Math.abs(flow.inverter_feed_w) : null, ""],
-      ["System overhead", flow.system_overhead_w, ""],
-      ["Panel aux", flow.panel_overhead_w, "live"],
-      ["Inverter aux", flow.inverter_overhead_w, "live"],
+      ["Solar", flow.solar_w, "", ""],
+      ["Battery", flow.battery_w, "", ""],
+      [
+        "Grid",
+        flow.grid_w != null ? Math.abs(flow.grid_w) : null,
+        "",
+        flow.grid_voltage_l1_v != null && flow.grid_voltage_l2_v != null
+          ? `${Number(flow.grid_voltage_l1_v).toFixed(0)} / ${Number(flow.grid_voltage_l2_v).toFixed(0)} V`
+          : flow.grid_voltage_v != null
+            ? `${Number(flow.grid_voltage_v).toFixed(0)} V`
+            : "",
+      ],
+      ["House", flow.home_w, "", ""],
+      ["Branch circuits", flow.branch_load_w, "", ""],
+      ["Inverter feed", flow.inverter_feed_w != null ? Math.abs(flow.inverter_feed_w) : null, "", ""],
+      ["System overhead", flow.system_overhead_w, "", ""],
+      ["Panel aux", flow.panel_overhead_w, "live", ""],
+      ["Inverter aux", flow.inverter_overhead_w, "live", ""],
     ];
     if (strip) {
       strip.innerHTML = tiles
-        .map(([label, watts, cls]) => {
+        .map(([label, watts, cls, detail]) => {
           // "live" tiles (panel/inverter aux) are readings available any
           // time of day now — only dim them when there's genuinely no value.
           const stateCls = watts == null ? "dim" : cls === "live" ? "night" : cls;
           return `<div class="comp-tile ${stateCls}">
             <div class="clabel">${escapeHtml(label)}</div>
             <div class="cval">${watts == null ? "—" : fmtW(watts)}</div>
+            ${detail ? `<div class="csub">${escapeHtml(detail)}</div>` : ""}
           </div>`;
         })
         .join("");

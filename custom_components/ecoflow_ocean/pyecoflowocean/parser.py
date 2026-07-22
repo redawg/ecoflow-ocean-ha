@@ -159,10 +159,19 @@ def _phase_metrics(blocks: list[dict[str, Any]]) -> dict[str, float | None]:
     return {}
 
 
-def _normalize_work_mode(raw: str | None) -> str | None:
+def _normalize_work_mode(raw: str | int | float | None) -> str | None:
     if raw is None:
         return None
-    return EMS_WORK_MODES.get(raw, raw.removeprefix("WORKMODE_").lower())
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        from .const import EMS_WORK_MODE_CODES
+
+        return EMS_WORK_MODE_CODES.get(int(raw), f"mode_{int(raw)}")
+    text = str(raw)
+    if text.isdigit():
+        from .const import EMS_WORK_MODE_CODES
+
+        return EMS_WORK_MODE_CODES.get(int(text), f"mode_{text}")
+    return EMS_WORK_MODES.get(text, text.removeprefix("WORKMODE_").lower())
 
 
 def parse_device(raw: dict[str, Any]) -> EcoflowDevice | None:

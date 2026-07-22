@@ -86,6 +86,8 @@ _NESTED_PACK_FIELDS = (1005, 1006, 1007, 1008)
 # SOC candidates — pack nests first; avoid ambiguous counters (e.g. 1472=string count).
 _PACK_SOC_FIELDS = (1005, 1006, 1007, 1008)
 _SYSTEM_SOC_FIELDS = (262, 1448)  # system / backup SOC style fields (0–100)
+# Operating mode (Self-powered / Intelligent / …) — confirmed via live toggles.
+_WORK_MODE_FIELD = 1470
 
 
 def parse_ocean_inverter_payload(payload: bytes) -> dict[str, Any] | None:
@@ -205,6 +207,24 @@ def parse_ocean_inverter_payload(payload: bytes) -> dict[str, Any] | None:
         if temp is not None and 0 < temp < 120:
             flat[f"inverter_temp_{idx}_c"] = float(temp)
 
+    # --- EMS operating mode (Self-powered / Intelligent / …) ---
+    mode_raw = leaf_vals.get(_WORK_MODE_FIELD)
+    if mode_raw is None:
+        # Also accept nested path finds (same helper style as panel).
+        from .panel_decoder import _find_float_in_tree
+
+        mode_raw = _find_float_in_tree(tree, _WORK_MODE_FIELD)
+    if mode_raw is not None and mode_raw >= 0:
+        mode_code = int(mode_raw)
+        flat["ems_work_mode_code"] = mode_code
+        from .const import EMS_WORK_MODE_CODES
+
+        label = EMS_WORK_MODE_CODES.get(mode_code)
+        if label:
+            # Feed the existing MQTT→state path that reads emsWordMode.
+            flat["emsWordMode"] = f"WORKMODE_{label.upper()}"
+            flat["work_mode"] = label
+
     if not flat:
         return None
 
@@ -313,7 +333,7 @@ def _extract_battery_packs(
         flat["bpSoc"] = sum(socs) / len(socs)
         flat["battery_soc"] = flat["bpSoc"]
     if pwrs:
-        flat["bpPwr"] = sum(pwrs)
+        flat["bpPwr"] = _combine_pack_power(packs, pwrs)
         flat["battery_power_w"] = flat["bpPwr"]
     flat["bp_pack_sns"] = [str(p["sn"]) for p in packs if p.get("sn")]
 
@@ -330,6 +350,46 @@ def _extract_battery_packs(
         if pack.get("sn"):
             flat[f"bp_pack_{idx}_sn"] = pack["sn"]
     return flat
+
+
+_SHARED_BUS_CURRENT_FLOOR_A = 5.0
+
+
+def _combine_pack_power(packs: list[dict[str, Any]], pwrs: list[float]) -> float:
+    """Combine per-pack power into one system-wide battery reading.
+
+    Parallel packs on this hardware routinely each report *close to* the
+    same shared bus current instead of their own individual branch share —
+    the BMS appears to mirror one shunt reading (with per-pack sampling
+    jitter) into every pack's status blob. Summing N such readings then
+    inflates the true total by roughly Nx. Two live, ground-truthed
+    snapshots on 2026-07-19 confirm this isn't a rare edge case:
+
+      - 4 packs at ≈-86 A each (spread <3%) summed to a 13.8 kW battery
+        draw vs. a solar/feed-balance-derived true draw of ≈3.2 kW
+        (a 4.3x overcount); averaging landed within ~7% instead.
+      - 4 packs at -25.5 to -46.4 A (spread ≈45%, still all discharging)
+        summed to a 5.2 kW draw vs. a true draw of ≈1.1-1.2 kW (a ~4.5x
+        overcount); averaging landed within ~13% instead.
+
+    So the trigger for averaging isn't "nearly identical", it's "multiple
+    packs simultaneously drawing non-trivial current in the *same*
+    direction" — that's the shared-bus-echo signature on this hardware.
+    Genuinely independent packs (e.g. one discharging while another
+    charges, as modeled in test_battery_pack_multi_header) keep the plain
+    sum, since averaging those would understate real, opposing per-pack
+    contributions.
+    """
+    if len(pwrs) <= 1:
+        return pwrs[0] if pwrs else 0.0
+
+    currents = [float(p["current_a"]) for p in packs if p.get("current_a") is not None]
+    if len(currents) == len(pwrs):
+        significant = [c for c in currents if abs(c) >= _SHARED_BUS_CURRENT_FLOOR_A]
+        if len(significant) >= 2 and len({c > 0 for c in significant}) == 1:
+            return sum(pwrs) / len(pwrs)
+
+    return sum(pwrs)
 
 
 def _looks_like_pack_sn(value: Any) -> bool:

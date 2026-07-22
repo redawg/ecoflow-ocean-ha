@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Battery vs Panel — corrected assets</title>
+  <style>
+    body { margin:0; font-family:Segoe UI,system-ui,sans-serif; background:#121418; color:#e8eaed; }
+    header { padding:24px 32px; border-bottom:1px solid #2a2f3a; }
+    header p { color:#9aa0a6; max-width:70ch; }
+    main { padding:24px 32px; display:grid; gap:24px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .card { background:#1c1f26; border:1px solid #2a2f3a; border-radius:10px; overflow:hidden; }
+    .img { min-height:320px; display:flex; align-items:center; justify-content:center; padding:16px;
+      background:linear-gradient(45deg,#2a2f3a 25%,transparent 25%) -12px 0/24px 24px,
+                 linear-gradient(-45deg,#2a2f3a 25%,transparent 25%) -12px 0/24px 24px,#181b21; }
+    .img img { max-height:380px; max-width:100%; object-fit:contain; }
+    figcaption { padding:12px 14px; border-top:1px solid #2a2f3a; font-size:.9rem; }
+    .ok { color:#7dcea0; } .bad { color:#e0a96d; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Corrected Ocean Pro battery cutouts</h1>
+    <p>
+      You were right — the Desert wall packs looked like blank panel doors.
+      Real Ocean Pro batteries are <strong>columns</strong> with silver face + dark side chassis + dark top cap + branding.
+      Updated files are in <code>web/frontend/img/gear/placable/</code>.
+    </p>
+  </header>
+  <main>
+    <section>
+      <h2>Use these as batteries</h2>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="battery-front-hd.png" alt="Battery front" /></div>
+          <figcaption><span class="ok">Battery front</span><br><code>battery-front-hd.png</code></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="battery-angle-hd.png" alt="Battery angle" /></div>
+          <figcaption><span class="ok">Battery 3/4 (shows dark sides)</span><br><code>battery-angle-hd.png</code></figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="wall-row-preview.png" alt="Row" /></div>
+          <figcaption>Panel · Inverter · Batteries row<br><code>wall-row-preview.png</code></figcaption>
+        </figure>
+      </div>
+    </section>
+    <section>
+      <h2>Not batteries (panel)</h2>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="smart-panel-closed.png" alt="Panel" /></div>
+          <figcaption><span class="bad">Smart Panel</span> — charcoal door, bottom LED strip<br><code>smart-panel-closed.png</code></figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

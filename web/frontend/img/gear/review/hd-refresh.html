@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gear HD refresh — review</title>
+  <style>
+    :root { --bg:#121418; --card:#1c1f26; --text:#e8eaed; --muted:#9aa0a6; --line:#2a2f3a; --ok:#7dcea0; --warn:#e0a96d; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.45; }
+    header { padding:28px 32px 12px; border-bottom:1px solid var(--line); }
+    header h1 { margin:0 0 8px; font-size:1.4rem; font-weight:600; }
+    header p { margin:0; color:var(--muted); max-width:78ch; }
+    main { padding:24px 32px 64px; display:grid; gap:28px; }
+    h2 { margin:0 0 6px; font-size:1.05rem; }
+    .note { margin:0 0 14px; color:var(--muted); font-size:.92rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+    .img { display:flex; align-items:center; justify-content:center; min-height:300px; padding:18px;
+      background:linear-gradient(45deg,#2a2f3a 25%,transparent 25%) -12px 0/24px 24px,
+                 linear-gradient(-45deg,#2a2f3a 25%,transparent 25%) -12px 0/24px 24px,
+                 linear-gradient(45deg,transparent 75%,#2a2f3a 75%) -12px 0/24px 24px,
+                 linear-gradient(-45deg,transparent 75%,#2a2f3a 75%) -12px 0/24px 24px,#181b21; }
+    .img img { max-width:100%; max-height:380px; object-fit:contain; display:block; }
+    .wide .img { min-height:220px; }
+    .wide img { max-height:420px; width:100%; }
+    figcaption { padding:12px 14px 14px; border-top:1px solid var(--line); font-size:.9rem; }
+    figcaption strong { display:block; margin-bottom:4px; }
+    figcaption span { color:var(--muted); font-size:.82rem; }
+    .badge { display:inline-block; margin-top:6px; padding:2px 8px; border-radius:999px; font-size:.72rem; }
+    .hd { background:#1e3328; color:var(--ok); }
+    .cur { background:#3a2a1e; color:var(--warn); }
+    .off { background:#243047; color:#5b9fff; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>HD refresh — same live look, sharper detail</h1>
+    <p>
+      Live tower assets were only ~130×260 px (EV ~126×174), which is why they look blurry.
+      These keep your current inverter/battery design language, rendered from sharper EcoFlow product photography.
+      EV uses the official EcoFlow product render (preferred). Live files not replaced yet.
+    </p>
+  </header>
+  <main>
+    <section>
+      <h2>Inverter — current look, HD</h2>
+      <p class="note">Source refs: live <code>inverter-tower.png</code> + <code>inverter-angle.png</code> + EcoFlow Form Meets Function close-up.</p>
+      <div class="grid">
+        <figure class="card wide">
+          <div class="img"><img src="compare-inverter.jpg" alt="Inverter compare" /></div>
+          <figcaption>
+            <strong>Left = current live (upscaled) · Right = HD proposed</strong>
+            <span>compare-inverter.jpg</span>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="hd-inverter-v3-cut.png" alt="HD inverter" /></div>
+          <figcaption>
+            <strong>HD inverter cutout</strong>
+            <span>hd-inverter-v3-cut.png</span>
+            <div class="badge hd">proposed HD</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="current-inverter-tower.png" alt="Current inverter" /></div>
+          <figcaption>
+            <strong>Current live</strong>
+            <span>inverter-tower.png · 132×260</span>
+            <div class="badge cur">current</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Battery — current look, HD</h2>
+      <p class="note">Same Ocean Pro tower style as live; sharper metal + lettering.</p>
+      <div class="grid">
+        <figure class="card wide">
+          <div class="img"><img src="compare-battery.jpg" alt="Battery compare" /></div>
+          <figcaption>
+            <strong>Left = current live (upscaled) · Right = HD proposed</strong>
+            <span>compare-battery.jpg</span>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="hd-battery-v3-cut.png" alt="HD battery" /></div>
+          <figcaption>
+            <strong>HD battery cutout</strong>
+            <span>hd-battery-v3-cut.png</span>
+            <div class="badge hd">proposed HD</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="current-battery-tower.png" alt="Current battery" /></div>
+          <figcaption>
+            <strong>Current live</strong>
+            <span>battery-tower.png · 122×264</span>
+            <div class="badge cur">current</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>EV Charger — official HD</h2>
+      <p class="note">Official EcoFlow product render (much sharper than the 126×174 live asset). Generated alternates were less accurate, so official is recommended.</p>
+      <div class="grid">
+        <figure class="card wide">
+          <div class="img"><img src="compare-ev.jpg" alt="EV compare" /></div>
+          <figcaption>
+            <strong>Left = current live (upscaled) · Right = official HD</strong>
+            <span>compare-ev.jpg</span>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="hd-ev-official-2x.png" alt="Official EV HD" /></div>
+          <figcaption>
+            <strong>Official EcoFlow EV charger (upscaled clean cutout)</strong>
+            <span>hd-ev-official-2x.png · ~1450×2070</span>
+            <div class="badge off">official · recommended</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="current-ev-charger.png" alt="Current EV" /></div>
+          <figcaption>
+            <strong>Current live</strong>
+            <span>ev-charger.png · 126×174</span>
+            <div class="badge cur">current</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

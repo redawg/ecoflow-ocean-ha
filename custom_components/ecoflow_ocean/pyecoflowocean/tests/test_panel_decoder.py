@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from pyecoflowocean.panel_decoder import parse_ocean_panel_payload, parse_panel_flat_telemetry
+from pyecoflowocean.panel_decoder import (
+    _find_float_in_tree,
+    parse_ocean_panel_payload,
+    parse_panel_flat_telemetry,
+)
 
 # Captured live from HR61ZA1AVH7X0100 (401 bytes)
 SAMPLE_PAYLOAD_HEX = (
@@ -10,6 +14,79 @@ SAMPLE_PAYLOAD_HEX = (
     "0fa7ec41cd5bc8edf542d55bc3d7ee41dd5b53435ec5e55b961764c5a55c4f4e0845ad5c93867b44b"
     "55cb267c744bd5cd94bcb44d55ca61ee743dd5c1ebe20441060182020012801380340fe01481550605801"
 )
+
+
+def test_find_float_handles_repeated_list_values() -> None:
+    # Live panel dumps show storm field 282 as a protobuf repeated list: [1].
+    tree = {1: {1: {282: [0, 1]}}}
+    assert _find_float_in_tree(tree, 282) == 1.0
+    assert _find_float_in_tree({282: True}, 282) == 1.0
+    assert _find_float_in_tree({282: False}, 282) == 0.0
+
+
+def test_storm_watch_field_value_two_not_claimed_armed() -> None:
+    # Encode nested 1.1.282 = 2 — stays put while Storm Guard toggles.
+    def enc_varint(n: int) -> bytes:
+        out = bytearray()
+        while True:
+            b = n & 0x7F
+            n >>= 7
+            out.append(b | (0x80 if n else 0))
+            if not n:
+                return bytes(out)
+
+    inner_282 = enc_varint((282 << 3) | 0) + enc_varint(2)
+    msg_1 = enc_varint((1 << 3) | 2) + enc_varint(len(inner_282)) + inner_282
+    root = enc_varint((1 << 3) | 2) + enc_varint(len(msg_1)) + msg_1
+    flat = parse_ocean_panel_payload(root)
+    assert flat is not None
+    assert flat.get("storm_mode") == 2
+    assert "storm_watch" not in flat  # comes from field 467, not 282
+
+
+def test_storm_watch_field_467() -> None:
+    def enc_varint(n: int) -> bytes:
+        out = bytearray()
+        while True:
+            b = n & 0x7F
+            n >>= 7
+            out.append(b | (0x80 if n else 0))
+            if not n:
+                return bytes(out)
+
+    def nest_under_1_1(inner: bytes) -> bytes:
+        msg_1 = enc_varint((1 << 3) | 2) + enc_varint(len(inner)) + inner
+        return enc_varint((1 << 3) | 2) + enc_varint(len(msg_1)) + msg_1
+
+    on = nest_under_1_1(enc_varint((467 << 3) | 0) + enc_varint(1))
+    off = nest_under_1_1(enc_varint((467 << 3) | 0) + enc_varint(0))
+    assert parse_ocean_panel_payload(on).get("storm_watch") is True
+    assert parse_ocean_panel_payload(off).get("storm_watch") is False
+
+
+def test_storm_active_requires_watch_and_mode_one() -> None:
+    def enc_varint(n: int) -> bytes:
+        out = bytearray()
+        while True:
+            b = n & 0x7F
+            n >>= 7
+            out.append(b | (0x80 if n else 0))
+            if not n:
+                return bytes(out)
+
+    inner = (
+        enc_varint((282 << 3) | 0)
+        + enc_varint(1)
+        + enc_varint((467 << 3) | 0)
+        + enc_varint(1)
+    )
+    msg_1 = enc_varint((1 << 3) | 2) + enc_varint(len(inner)) + inner
+    root = enc_varint((1 << 3) | 2) + enc_varint(len(msg_1)) + msg_1
+    flat = parse_ocean_panel_payload(root)
+    assert flat is not None
+    assert flat.get("storm_mode") == 1
+    assert flat.get("storm_watch") is True
+    assert flat.get("storm_enabled") is True
 
 
 def test_parse_panel_flat_telemetry_extended_fields() -> None:

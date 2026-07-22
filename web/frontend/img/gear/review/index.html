@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EcoFlow Ocean gear — asset review</title>
+  <style>
+    :root {
+      --bg: #121418;
+      --card: #1c1f26;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --line: #2a2f3a;
+      --accent: #5b9fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    header {
+      padding: 28px 32px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    header h1 { margin: 0 0 8px; font-size: 1.45rem; font-weight: 600; }
+    header p { margin: 0; color: var(--muted); max-width: 72ch; }
+    main { padding: 24px 32px 64px; display: grid; gap: 28px; }
+    section h2 {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    section .note { margin: 0 0 14px; color: var(--muted); font-size: 0.92rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .card .img {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+      padding: 18px;
+      background:
+        linear-gradient(45deg, #2a2f3a 25%, transparent 25%) -12px 0 / 24px 24px,
+        linear-gradient(-45deg, #2a2f3a 25%, transparent 25%) -12px 0 / 24px 24px,
+        linear-gradient(45deg, transparent 75%, #2a2f3a 75%) -12px 0 / 24px 24px,
+        linear-gradient(-45deg, transparent 75%, #2a2f3a 75%) -12px 0 / 24px 24px,
+        #181b21;
+    }
+    .card img {
+      max-width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+      display: block;
+    }
+    .card figcaption {
+      padding: 12px 14px 14px;
+      border-top: 1px solid var(--line);
+      font-size: 0.9rem;
+    }
+    .card figcaption strong { display: block; margin-bottom: 4px; }
+    .card figcaption span { color: var(--muted); font-size: 0.82rem; }
+    .wide .img { min-height: 220px; }
+    .wide img { max-height: 420px; width: 100%; }
+    .badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      background: #243047;
+      color: var(--accent);
+    }
+    .badge.official { background: #1e3328; color: #7dcea0; }
+    .badge.current { background: #3a2a1e; color: #e0a96d; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ocean Pro gear assets — review set</h1>
+    <p>
+      New cutouts based on official EcoFlow product photography (Ocean Pro, Smart Panel 40, EV Charger).
+      Live house/dashboard assets are <strong>not</strong> changed yet — pick what you want to promote.
+    </p>
+  </header>
+  <main>
+    <section>
+      <h2>Installed wall look (style target)</h2>
+      <p class="note">Panel → inverter → battery row, premium appliance finish, no messy conduit.</p>
+      <div class="grid">
+        <figure class="card wide">
+          <div class="img"><img src="06-wall-install-style-v2.png" alt="Wall install style" /></div>
+          <figcaption>
+            <strong>Wall install style plate</strong>
+            <span>Reference for baking into Desert/Forest house images</span>
+            <div class="badge">proposed</div>
+          </figcaption>
+        </figure>
+        <figure class="card wide">
+          <div class="img"><img src="05-wall-row-preview-dark.jpg" alt="Cutout wall row" /></div>
+          <figcaption>
+            <strong>Cutout composite row</strong>
+            <span>Same parts composed as transparent overlays for dashboard/house</span>
+            <div class="badge">proposed</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Smart Panel 40</h2>
+      <p class="note">Closed door for house plates; open door is official EcoFlow product shot.</p>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="01-panel-closed-v2-cut.png" alt="Panel closed proposed" /></div>
+          <figcaption>
+            <strong>Closed (proposed)</strong>
+            <span>01-panel-closed-v2-cut.png</span>
+            <div class="badge">proposed</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="01b-panel-open-official-cut.png" alt="Panel open official" /></div>
+          <figcaption>
+            <strong>Open internals (official)</strong>
+            <span>Useful for dashboard detail / about card</span>
+            <div class="badge official">official crop</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="current-panel-tower.png" alt="Current panel" /></div>
+          <figcaption>
+            <strong>Current live asset</strong>
+            <span>panel-tower.png</span>
+            <div class="badge current">current</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Ocean Pro inverter</h2>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="02-inverter-front-v2-cut.png" alt="Inverter proposed" /></div>
+          <figcaption>
+            <strong>Proposed front cutout</strong>
+            <span>02-inverter-front-v2-cut.png — silver body + dark base</span>
+            <div class="badge">proposed</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="current-inverter-tower.png" alt="Current inverter" /></div>
+          <figcaption>
+            <strong>Current live asset</strong>
+            <span>inverter-tower.png</span>
+            <div class="badge current">current</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Battery pack</h2>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="03-battery-front-v2-cut.png" alt="Battery proposed" /></div>
+          <figcaption>
+            <strong>Proposed front cutout</strong>
+            <span>03-battery-front-v2-cut.png — silver face, dark sides/top</span>
+            <div class="badge">proposed</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="current-battery-tower.png" alt="Current battery" /></div>
+          <figcaption>
+            <strong>Current live asset</strong>
+            <span>battery-tower.png</span>
+            <div class="badge current">current</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>EV Charger</h2>
+      <div class="grid">
+        <figure class="card">
+          <div class="img"><img src="04b-ev-charger-official-cut.png" alt="EV official" /></div>
+          <figcaption>
+            <strong>Official product (preferred)</strong>
+            <span>04b-ev-charger-official-cut.png — real EcoFlow marketing render</span>
+            <div class="badge official">official</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="04-ev-charger-front-v2-cut.png" alt="EV proposed" /></div>
+          <figcaption>
+            <strong>Generated alternate</strong>
+            <span>04-ev-charger-front-v2-cut.png</span>
+            <div class="badge">proposed</div>
+          </figcaption>
+        </figure>
+        <figure class="card">
+          <div class="img"><img src="current-ev-charger.png" alt="Current EV" /></div>
+          <figcaption>
+            <strong>Current live asset</strong>
+            <span>ev-charger.png</span>
+            <div class="badge current">current</div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

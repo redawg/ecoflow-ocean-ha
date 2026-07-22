@@ -510,18 +510,32 @@ class AccountHub:
         # ("charging") while the individual pack readings summed to ~15W
         # (idle/balancing) and the EcoFlow app showed no charging — both at
         # soc=100%. Suppress the apparent-charging artifact once the BMS
-        # reports itself topped off; a full battery can still legitimately
-        # discharge (battery_n < 0), so only the positive/charging side is
-        # clamped.
+        # reports itself topped off.
+        #
+        # The same overhead model also produces small *negative* residuals
+        # (false "discharging") when solar is high and the pack bank is
+        # idle at 100%. Ground-truthed 2026-07-20: solar≈11.9kW, feed≈11.3kW,
+        # overhead_est≈603W → battery_n≈−62W while pack sum≈+14W and SOC=100%
+        # with heavy solar export powering the house. Reconfirmed 2026-07-21:
+        # solar≈12.8kW exporting ~12kW, packs each ±6W, but inv.battery_power_w
+        # was absent so the old packs_idle check never fired and residuals of
+        # −3…−50W leaked as "discharge". Use per-pack watts when the bank
+        # total is missing; keep real kW-scale discharge at full SOC intact.
         FULL_SOC_NO_CHARGE_PCT = 99.0
+        FULL_SOC_IDLE_BAND_W = 200.0
+        PACK_IDLE_W = 100.0
         soc_n = _num(inv.get("battery_soc"))
         if (
             battery_n is not None
-            and battery_n > 0
             and soc_n is not None
             and soc_n >= FULL_SOC_NO_CHARGE_PCT
         ):
-            battery_n = 0.0
+            if battery_n > 0:
+                battery_n = 0.0
+            elif abs(battery_n) < FULL_SOC_IDLE_BAND_W and _battery_bank_idle(
+                inv, pack_battery_n, PACK_IDLE_W
+            ):
+                battery_n = 0.0
 
         panel_home_n = _num(pan.get("home_power_w"))
         panel_self_n = _num(pan.get("panel_self_consumption_w"))
@@ -578,6 +592,12 @@ class AccountHub:
             "home_w": home_w,
             "soc": inv.get("battery_soc"),
             "work_mode": inv.get("work_mode"),
+            "storm_mode": pan.get("storm_mode"),
+            "storm_watch": pan.get("storm_watch"),
+            "storm_enabled": pan.get("storm_enabled"),
+            "backup_reserve_soc": pan.get("backup_reserve_soc"),
+            "solar_backup_reserve_soc": pan.get("solar_backup_reserve_soc"),
+            "backup_soc_limit": inv.get("backup_soc_limit"),
             "online": inv.get("online") if inverter else None,
             "panel_home_w": pan.get("home_power_w"),
             "panel_grid_import_w": pan.get("grid_import_power_w"),
@@ -594,6 +614,13 @@ class AccountHub:
             "ev_charge_w": _ev_charge_watts(evs, pan),
             "vehicle_connected": evs.get("vehicle_connected"),
             "charging_active": evs.get("charging_active"),
+            # Voltages when the panel / inverter / EV report them.
+            "grid_voltage_v": _num(pan.get("grid_voltage_v")),
+            "grid_voltage_l1_v": _num(pan.get("grid_voltage_l1_v")),
+            "grid_voltage_l2_v": _num(pan.get("grid_voltage_l2_v")),
+            "phase_a_voltage_v": _num(inv.get("phase_a_voltage_v")),
+            "phase_b_voltage_v": _num(inv.get("phase_b_voltage_v")),
+            "ev_output_voltage_v": _num(evs.get("output_voltage_v")),
             "updated_at": inv.get("updated_at") or pan.get("updated_at") or evs.get("updated_at"),
         }
 
@@ -737,10 +764,22 @@ def _component_overhead(
 
 
 def _solar_strings(inv: dict[str, Any]) -> list[dict[str, Any]]:
+    """Expose MPPT string slots for the flow UI.
+
+    Ocean Pro deployments commonly have 5 strings; some configs go up to 8.
+    Always return a contiguous 1..N list (default N=5) so the UI can draw one
+    connector per string into the Solar aggregate box.
+    """
     powers = inv.get("mppt_string_power_w") or {}
-    # Always expose slots 1–5; CDO array has five strings that should stay active.
+    max_slots = 8
+    default_slots = 5
+    highest = 0
+    for idx in range(1, max_slots + 1):
+        if powers.get(idx, powers.get(str(idx))) is not None:
+            highest = idx
+    count = min(max_slots, max(default_slots, highest))
     out: list[dict[str, Any]] = []
-    for idx in range(1, 6):
+    for idx in range(1, count + 1):
         watts = powers.get(idx, powers.get(str(idx)))
         if watts is None:
             watts = 0.0
@@ -915,3 +954,33 @@ def _num(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _battery_bank_idle(
+    inv: dict[str, Any],
+    pack_battery_n: float | None,
+    pack_idle_w: float,
+) -> bool:
+    """True when pack telemetry says the battery bank is effectively idle.
+
+    Prefer the combined `battery_power_w` when present. When that bank total is
+    missing (common on the live MQTT path), fall back to per-pack `power_w`:
+    if every reported pack is within the idle band, the bank is idle.
+    """
+    if pack_battery_n is not None:
+        return abs(pack_battery_n) < pack_idle_w
+
+    packs = inv.get("battery_packs") or []
+    if not isinstance(packs, list) or not packs:
+        return False
+
+    known: list[float] = []
+    for pack in packs:
+        if not isinstance(pack, dict):
+            continue
+        watts = _num(pack.get("power_w"))
+        if watts is not None:
+            known.append(watts)
+    if not known:
+        return False
+    return all(abs(watts) < pack_idle_w for watts in known)

@@ -37,7 +37,10 @@ class EcoflowPanelState:
     panel_self_consumption_w: float | None = None
     backup_reserve_soc: float | None = None
     solar_backup_reserve_soc: float | None = None
-    storm_enabled: bool | None = None
+    # Field 282: 0=off, 1=in storm mode (inbound/active), 2=Storm Watch armed.
+    storm_mode: int | None = None
+    storm_watch: bool | None = None
+    storm_enabled: bool | None = None  # True only while in active storm mode
     linked_ev_charger_serial: str | None = None
     ev_charge_power_w: float | None = None
     online: bool | None = None
@@ -64,6 +67,8 @@ class EcoflowPanelState:
             "panel_self_consumption_w",
             "backup_reserve_soc",
             "solar_backup_reserve_soc",
+            "storm_mode",
+            "storm_watch",
             "storm_enabled",
             "linked_ev_charger_serial",
             "ev_charge_power_w",

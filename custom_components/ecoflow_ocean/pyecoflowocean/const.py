@@ -62,3 +62,19 @@ EMS_WORK_MODES = {
     "WORKMODE_BACKUP": "backup",
     "WORKMODE_DBG": "debug",
 }
+
+# CDO Ocean Pro MQTT field 1470 — live Self-powered ↔ Intelligent toggles
+# (2026-07-20) flipped 0 ↔ 9. EU PowerOcean docs list overlapping numeric
+# codes (9=TIMER_MODE there); we prefer the US app names confirmed live.
+EMS_WORK_MODE_CODES = {
+    0: "self_use",       # Self-powered
+    1: "time_of_use",
+    2: "backup",         # Emergency Backup (foxthefox) / seen in dumps
+    3: "debug",
+    4: "ac_makeup",
+    5: "drm",
+    6: "remote_schedule",
+    7: "standby",
+    8: "soc_calibration",
+    9: "intelligent",    # Intelligent (app) — EU docs call this TIMER_MODE
+}
